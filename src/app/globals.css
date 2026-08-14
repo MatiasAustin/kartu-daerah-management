@@ -128,3 +128,63 @@
     @apply font-sans;
   }
 }
+
+/* MapLibre Control Group Override */
+.maplibregl-ctrl-group {
+  overflow: visible !important;
+}
+
+/* MapLibre Geolocate Customization */
+.maplibregl-ctrl-geolocate {
+  transform: scale(1.15) !important;
+  transform-origin: center right !important;
+  margin-top: 8px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 6px !important;
+  background-color: white !important;
+  position: relative;
+  overflow: visible !important;
+}
+
+/* "Where I am" Chat Bubble */
+.maplibregl-ctrl-geolocate::before {
+  content: "Where I am";
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: var(--color-indigo-600, #4f46e5);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: var(--font-sans), sans-serif;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 1;
+  animation: hideBubble 0.5s ease 4s forwards;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Chat Bubble Triangle */
+.maplibregl-ctrl-geolocate::after {
+  content: "";
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: transparent transparent transparent var(--color-indigo-600, #4f46e5);
+  pointer-events: none;
+  opacity: 1;
+  animation: hideBubble 0.5s ease 4s forwards;
+}
+
+@keyframes hideBubble {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
