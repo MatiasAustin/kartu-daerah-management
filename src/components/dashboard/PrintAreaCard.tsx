@@ -15,9 +15,10 @@ interface PrintAreaCardProps {
   project: any;
   group: any;
   area: any;
+  isPublicView?: boolean;
 }
 
-export function PrintAreaCard({ project, group, area }: PrintAreaCardProps) {
+export function PrintAreaCard({ project, group, area, isPublicView = false }: PrintAreaCardProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
 
@@ -144,7 +145,17 @@ export function PrintAreaCard({ project, group, area }: PrintAreaCardProps) {
     <div className="min-h-screen bg-slate-100 py-8 px-4 flex flex-col items-center justify-center print:bg-white print:p-0">
       
       {/* Floating Action Bar (Hidden on print) */}
-      <div className="fixed top-6 right-6 flex gap-3 print:hidden z-50">
+      <div className="fixed top-6 right-6 flex flex-col items-end gap-3 print:hidden z-50">
+        <button
+          onClick={() => {
+            const url = `${window.location.origin}/view/area/${area.id}`;
+            navigator.clipboard.writeText(url);
+            alert("Public link copied to clipboard!");
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg shadow-lg hover:bg-slate-900 transition-colors font-medium"
+        >
+          Copy Share Link
+        </button>
         <button
           onClick={() => window.print()}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-medium"

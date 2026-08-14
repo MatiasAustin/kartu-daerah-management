@@ -417,12 +417,24 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                             className="flex-1 text-xs"
                             variant="outline"
                             size="sm"
-                            onClick={() => setDeleteAreaTarget(selectedArea)}
+                            onClick={() => {
+                              const url = `${window.location.origin}/view/area/${selectedArea.id}`;
+                              navigator.clipboard.writeText(url);
+                              alert("Public link copied to clipboard!");
+                            }}
                           >
-                            <Trash2 className="h-3.5 w-3.5 mr-1 text-red-400" />
-                            <span className="text-red-500">Delete</span>
+                            Copy Link
                           </Button>
                         </div>
+                        <Button
+                          className="w-full text-xs text-red-500 hover:text-red-600 border-red-200 hover:bg-red-50"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDeleteAreaTarget(selectedArea)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />
+                          Delete Area
+                        </Button>
                       </div>
                     </div>
                   </ScrollArea>
