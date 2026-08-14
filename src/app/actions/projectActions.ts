@@ -14,11 +14,17 @@ export async function createProject(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // Generate a simple unique slug
+  const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const uniqueSuffix = Math.random().toString(36).substring(2, 8);
+  const slug = `${baseSlug}-${uniqueSuffix}`;
+
   const { data, error } = await supabase
     .from("projects")
     .insert({
       name,
       description,
+      slug,
       owner_id: user.id,
       is_public: false
     })
