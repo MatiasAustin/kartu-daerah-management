@@ -568,7 +568,6 @@ export function MapContainer({
         groups: a.groups,
       });
       const geo = resolveGeometry(a);
-      console.log("[MapDebug] resolved geo:", geo?.type, geo ? "OK" : "FAILED");
       if (geo) {
         validFeatures.push({
           type: "Feature",
@@ -580,10 +579,16 @@ export function MapContainer({
     }
     console.log("[MapDebug] validFeatures:", validFeatures.length, validFeatures[0]);
 
-    (map.current.getSource("areas-source") as maplibregl.GeoJSONSource)?.setData({
-      type: "FeatureCollection",
-      features: validFeatures,
-    } as any);
+    const source = map.current.getSource("areas-source") as maplibregl.GeoJSONSource;
+    if (source) {
+      console.log("[MapDebug] Setting data to source!");
+      source.setData({
+        type: "FeatureCollection",
+        features: validFeatures,
+      } as any);
+    } else {
+      console.log("[MapDebug] SOURCE IS UNDEFINED! Cannot set data.");
+    }
   }, [areas, mapLoaded]);
 
   // ── Sync fill/line style live ─────────────────────────────────────────────
