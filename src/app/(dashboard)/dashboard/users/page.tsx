@@ -10,7 +10,7 @@ export default async function UsersPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto w-full">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">User Management</h1>
         <p className="text-slate-500 mt-2">View and manage system administrators and area managers.</p>

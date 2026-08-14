@@ -214,10 +214,10 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
   }, [area, group]);
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-4 flex flex-col items-center justify-center print:bg-white print:p-0">
+    <div className="min-h-screen bg-slate-100 py-4 sm:py-8 flex flex-col items-center justify-start overflow-x-hidden print:bg-white print:p-0 print:block">
       
-      {/* Floating Action Bar (Hidden on print) */}
-      <div className="fixed top-6 right-6 flex flex-col items-end print:hidden z-50">
+      {/* Action Bar (Responsive flow on screen, Hidden on print) */}
+      <div className="w-full max-w-[148mm] px-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 print:hidden z-50">
         <div className="bg-white/90 p-4 rounded-lg shadow-lg border border-slate-200 max-w-xs text-sm mb-4">
           <h4 className="font-bold text-slate-800 mb-2">Printing Tips</h4>
           <ul className="text-slate-600 space-y-1 text-xs list-disc pl-4">
@@ -257,16 +257,18 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
         }
       `}} />
 
-      {/* A5 Card Container */}
-      {/* A5 physical size is 148mm x 210mm */}
-      <div 
-        className="bg-white text-black flex flex-col relative shadow-2xl print:shadow-none mx-auto overflow-hidden border border-slate-200 print:border-none"
-        style={{
-          width: "148mm",
-          height: "210mm",
-          padding: "12mm", // Standard print margin
-        }}
-      >
+      {/* A5 Card Container Wrapper for Screen Scaling */}
+      <div className="w-full flex justify-center origin-top transform scale-[0.65] sm:scale-100 transition-transform print:scale-100 print:transform-none">
+        
+        {/* A5 physical size is 148mm x 210mm */}
+        <div 
+          className="bg-white text-black flex flex-col relative shadow-2xl print:shadow-none overflow-hidden border border-slate-200 print:border-none"
+          style={{
+            width: "148mm",
+            height: "210mm",
+            padding: "12mm", // Standard print margin
+          }}
+        >
         
         {/* Header */}
         <header className="border-b-[3px] border-black pb-3 mb-4 flex justify-between items-end shrink-0">
@@ -322,7 +324,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
             <QRCodeSVG value={googleMapsUrl} size={76} level="H" />
           </div>
         </footer>
-
+        </div>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `

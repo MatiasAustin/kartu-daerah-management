@@ -14,7 +14,7 @@ export default async function MapsOverviewPage() {
   const { data: projects } = await supabase.from("projects").select("id, name");
 
   return (
-    <div className="p-8 max-w-4xl mx-auto w-full h-full flex flex-col">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto w-full h-full flex flex-col">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Maps Overview</h1>
         <p className="text-slate-500 mt-2">A global view of all your geographic territories.</p>

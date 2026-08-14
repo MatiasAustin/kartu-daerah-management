@@ -355,7 +355,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
               if (!selectedArea) return null;
               const group = groups.find((g: any) => g.id === selectedArea.group_id);
               return (
-                <div className="max-h-[50vh] md:max-h-none flex flex-col">
+                <div className="max-h-[35vh] md:max-h-none flex flex-col">
                   <div className="h-1 w-12 bg-slate-200 rounded-full mx-auto mt-2 md:hidden shrink-0" />
                   <div className="h-2 w-full mt-2 md:mt-0 shrink-0" style={{ backgroundColor: group?.color || "#cbd5e1" }} />
                   <ScrollArea className="p-5 overflow-y-auto flex-1">
