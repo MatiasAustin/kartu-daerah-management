@@ -25,7 +25,7 @@ import { AreaModal } from "./AreaModal";
 import { ManagerModal } from "./ManagerModal";
 import { ShareModal } from "./ShareModal";
 import { ImportKmlButton } from "./ImportKmlButton";
-import { deleteArea } from "@/app/actions/areaActions";
+import { deleteArea, updateArea } from "@/app/actions/areaActions";
 import { deleteGroup } from "@/app/actions/groupActions";
 
 export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) {
@@ -296,8 +296,16 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
         <MapContainer
           areas={areas}
           onAreaCreate={handleMapAreaCreate}
-          onAreaUpdate={(areaId, geometry) => {
+          onAreaUpdate={async (areaId, geometry) => {
+            // Optimistically update UI
             setAreas((prev: any[]) => prev.map((a: any) => a.id === areaId ? { ...a, geometry } : a));
+            
+            // Persist to database
+            const res = await updateArea(areaId, project.id, { geometry });
+            if (res.error) {
+              console.error("Failed to save area geometry:", res.error);
+              alert("Failed to save changes. Please try again.");
+            }
           }}
           onAreaDelete={(id) => setAreas((prev: any[]) => prev.filter((a: any) => a.id !== id))}
         />
