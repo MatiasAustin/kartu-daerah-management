@@ -433,10 +433,16 @@ export function MapContainer({
     if (!mapLoaded || !map.current) return;
     (map.current.getSource("areas-source") as maplibregl.GeoJSONSource)?.setData({
       type: "FeatureCollection",
-      features: areas.filter(a => a.geometry).map(a => ({
-        type: "Feature", id: a.id, geometry: a.geometry,
-        properties: { ...a, color: a.groups?.color || "#ef4444" },
-      })),
+      features: areas.filter(a => a.geometry || a.geojson).map(a => {
+        let geo = a.geojson || a.geometry;
+        if (typeof geo === 'string' && geo.startsWith('{')) {
+          try { geo = JSON.parse(geo); } catch (e) {}
+        }
+        return {
+          type: "Feature", id: a.id, geometry: geo,
+          properties: { ...a, color: a.groups?.color || "#ef4444" },
+        };
+      }),
     } as any);
   }, [areas, mapLoaded]);
 
