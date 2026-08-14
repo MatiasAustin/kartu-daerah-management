@@ -166,13 +166,21 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       style: printStyle as any,
       center: center as [number, number],
       zoom: 14,
-      interactive: false,
       preserveDrawingBuffer: true,
     } as any);
 
+    const m = map.current;
+    m.scrollZoom.disable();
+    m.boxZoom.disable();
+    m.dragRotate.disable();
+    m.dragPan.disable();
+    m.keyboard.disable();
+    m.doubleClickZoom.disable();
+    m.touchZoomRotate.disable();
+
     map.current.on("load", () => {
-      const m = map.current;
-      if (!m || !geo) return;
+      const currentMap = map.current;
+      if (!currentMap || !geo) return;
 
       // Calculate Bounding Box to fit map automatically
       let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
@@ -191,7 +199,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       if (geo.coordinates) {
         extractCoords(geo.coordinates);
         if (minLng < maxLng && minLat < maxLat) {
-          m.fitBounds(
+          currentMap.fitBounds(
             [[minLng, minLat], [maxLng, maxLat]], 
             { padding: 50, duration: 0 } // No animation for print
           );
