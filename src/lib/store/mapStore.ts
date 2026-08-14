@@ -12,6 +12,7 @@ interface MapState {
   setHoveredAreaId: (id: string | null) => void;
   setDrawMode: (mode: "simple_select" | "draw_polygon") => void;
   flyToArea: (lng: number, lat: number, zoom?: number) => void;
+  fitBounds: (bounds: [[number, number], [number, number]]) => void;
 }
 
 export const useMapStore = create<MapState>((set, get) => ({
@@ -33,6 +34,13 @@ export const useMapStore = create<MapState>((set, get) => ({
         zoom,
         essential: true,
       });
+    }
+  },
+  
+  fitBounds: (bounds) => {
+    const { map } = get();
+    if (map) {
+      map.fitBounds(bounds, { padding: 50, duration: 1000 });
     }
   },
 }));

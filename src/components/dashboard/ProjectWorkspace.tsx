@@ -34,7 +34,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
   const [activeGroupFilter, setActiveGroupFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { selectedAreaId, setSelectedAreaId, flyToArea } = useMapStore();
+  const { selectedAreaId, setSelectedAreaId, flyToArea, fitBounds } = useMapStore();
 
   useEffect(() => {
     setAreas(initialAreas);
@@ -68,6 +68,43 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
     setIsMobileListOpen(false);
     if (area.center_lng && area.center_lat) {
       flyToArea(area.center_lng, area.center_lat, 15);
+    }
+  };
+
+  const handleGroupClick = (groupId: string | null) => {
+    setActiveGroupFilter(groupId);
+    setIsMobileListOpen(false);
+
+    if (groupId) {
+      const groupAreas = areas.filter((a: any) => a.group_id === groupId);
+      if (groupAreas.length > 0) {
+        let minX = 180, maxX = -180, minY = 90, maxY = -90;
+        let hasValidCoords = false;
+
+        const extract = (coords: any[]) => {
+          if (typeof coords[0] === 'number') {
+            hasValidCoords = true;
+            if (coords[0] < minX) minX = coords[0];
+            if (coords[0] > maxX) maxX = coords[0];
+            if (coords[1] < minY) minY = coords[1];
+            if (coords[1] > maxY) maxY = coords[1];
+          } else if (Array.isArray(coords)) {
+            coords.forEach(extract);
+          }
+        };
+
+        groupAreas.forEach((a: any) => {
+          if (a.geometry?.coordinates) {
+            extract(a.geometry.coordinates);
+          }
+        });
+
+        if (hasValidCoords && minX < maxX && minY < maxY) {
+          fitBounds([[minX, minY], [maxX, maxY]]);
+        } else if (groupAreas[0].center_lng) {
+          flyToArea(groupAreas[0].center_lng, groupAreas[0].center_lat, 13);
+        }
+      }
     }
   };
 
@@ -184,7 +221,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
             </div>
             <div className="space-y-1">
               <button
-                onClick={() => setActiveGroupFilter(null)}
+                onClick={() => handleGroupClick(null)}
                 className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${!activeGroupFilter ? "bg-slate-100 font-medium text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}
               >
                 All Groups
@@ -192,7 +229,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
               {groups.map((group: any) => (
                 <div key={group.id} className={`flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors group/item ${activeGroupFilter === group.id ? "bg-slate-100 font-medium text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}>
                   <button
-                    onClick={() => setActiveGroupFilter(group.id)}
+                    onClick={() => handleGroupClick(group.id)}
                     className="flex items-center gap-2 flex-1 truncate"
                   >
                     <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
