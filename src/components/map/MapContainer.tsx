@@ -391,7 +391,7 @@ export function MapContainer({
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    map.current = new MapLibreTypes.Map({
+    map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: RASTER_STYLE,
       center: [106.8272, -6.1751],
