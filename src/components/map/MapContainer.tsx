@@ -64,6 +64,13 @@ export function MapContainer({
     });
 
     map.current.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.current.addControl(new maplibregl.GeolocateControl({
+      positionOptions: {
+        enableHighAccuracy: true
+      },
+      trackUserLocation: true,
+      showUserHeading: true
+    }), "top-right");
 
     draw.current = new MapboxDraw({
       displayControlsDefault: false,
