@@ -3,6 +3,11 @@
 import React, { useRef, useEffect, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+if (typeof window !== "undefined") {
+  maplibregl.setWorkerUrl("https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl-csp-worker.js");
+}
+
 import { QRCodeSVG } from "qrcode.react";
 import { Printer, Navigation } from "lucide-react";
 
