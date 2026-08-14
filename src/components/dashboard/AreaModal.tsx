@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { createArea, updateArea } from "@/app/actions/areaActions";
 import { GroupModal } from "./GroupModal";
 
@@ -14,29 +15,53 @@ interface AreaModalProps {
   projectId: string;
   groups: any[];
   onGroupCreated?: () => void;
-  initialData?: any; 
-  // initialData could be raw drawn GeoJSON feature (needs saving) 
-  // OR an existing area from DB (needs updating)
+  initialData?: any;
 }
 
 export function AreaModal({ isOpen, onClose, projectId, groups, onGroupCreated, initialData }: AreaModalProps) {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
-  // If initialData has an 'id' and 'group_id', it's an existing DB record.
-  // If it just has geometry properties (like from MapboxDraw), it's a new unsaved area.
-  const isEditing = !!initialData?.group_id;
 
-  const [areaNumber, setAreaNumber] = useState(initialData?.area_number || "");
-  const [name, setName] = useState(initialData?.name || "");
-  const [description, setDescription] = useState(initialData?.description || "");
-  const [groupId, setGroupId] = useState(initialData?.group_id || groups[0]?.id || "");
-  
+  const isEditing = !!initialData?.id && !!initialData?.group_id;
+
+  // Re-initialize form state whenever the modal opens with new data
+  const [areaNumber, setAreaNumber] = useState("");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [groupId, setGroupId] = useState("");
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Reset form when modal opens/initialData changes
+  useEffect(() => {
+    if (isOpen) {
+      setAreaNumber(initialData?.area_number || "");
+      setName(initialData?.name || "");
+      setDescription(initialData?.description || "");
+      setGroupId(initialData?.group_id || "");
+      setError(null);
+    }
+  }, [isOpen, initialData]);
+
+  // Auto-select first group when groups load and nothing selected
+  useEffect(() => {
+    if (isOpen && !groupId && groups.length > 0) {
+      setGroupId(groups[0].id);
+    }
+  }, [isOpen, groups, groupId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!groupId) {
-      setError("Please select a group first.");
+    if (!isEditing && !groupId) {
+      setError("Please select or create a group first.");
+      return;
+    }
+    if (!name.trim()) {
+      setError("Area name is required.");
+      return;
+    }
+    if (!areaNumber.trim()) {
+      setError("Area number is required.");
       return;
     }
 
@@ -45,35 +70,33 @@ export function AreaModal({ isOpen, onClose, projectId, groups, onGroupCreated, 
 
     let res;
     if (isEditing) {
-      // Update existing area
       res = await updateArea(initialData.id, projectId, {
         area_number: areaNumber,
         name,
         description,
-        // We do not update geometry here, geometry is updated via map drag events
       });
     } else {
-      // Create new area
-      
-      // Calculate basic center point for labels (naive approach for MVP)
-      // A proper approach would use Turf.js centroid, but we'll approximate using the first coordinate
+      // Calculate centroid (average of polygon vertices)
       let center_lng = 0;
       let center_lat = 0;
-      
-      if (initialData?.geometry?.coordinates?.[0]?.[0]) {
-         center_lng = initialData.geometry.coordinates[0][0][0];
-         center_lat = initialData.geometry.coordinates[0][0][1];
+      const coords = initialData?.geometry?.coordinates?.[0];
+      if (coords && coords.length > 0) {
+        const sum = coords.reduce(
+          (acc: [number, number], c: [number, number]) => [acc[0] + c[0], acc[1] + c[1]],
+          [0, 0]
+        );
+        center_lng = sum[0] / coords.length;
+        center_lat = sum[1] / coords.length;
       }
 
-      const data = {
+      res = await createArea(projectId, groupId, {
         area_number: areaNumber,
         name,
         description,
-        geometry: initialData.geometry,
+        geometry: initialData?.geometry,
         center_lng,
         center_lat,
-      };
-      res = await createArea(projectId, groupId, data);
+      });
     }
 
     setIsLoading(false);
@@ -87,17 +110,23 @@ export function AreaModal({ isOpen, onClose, projectId, groups, onGroupCreated, 
 
   return (<>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Area Details" : "Save New Area"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-2 text-sm text-red-500 bg-red-50 rounded">{error}</div>}
-          
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+          {error && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {/* Group selector (only for new areas) */}
           {!isEditing && (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="groupId">Assign to Group</Label>
+                <Label htmlFor="groupId">Assign to Group <span className="text-red-500">*</span></Label>
                 <button
                   type="button"
                   onClick={() => setIsGroupModalOpen(true)}
@@ -107,18 +136,18 @@ export function AreaModal({ isOpen, onClose, projectId, groups, onGroupCreated, 
                 </button>
               </div>
               {groups.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 p-4 text-center">
-                  <p className="text-sm text-slate-500 mb-2">No groups yet. Create one first.</p>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setIsGroupModalOpen(true)}>
-                    Create a Group
+                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 p-5 text-center gap-2">
+                  <p className="text-sm text-slate-500">No groups yet. Create a group first to assign this area.</p>
+                  <Button type="button" size="sm" onClick={() => setIsGroupModalOpen(true)}>
+                    + Create Group
                   </Button>
                 </div>
               ) : (
-                <select 
-                  id="groupId" 
-                  value={groupId} 
+                <select
+                  id="groupId"
+                  value={groupId}
                   onChange={(e) => setGroupId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   required
                 >
                   <option value="" disabled>Select a group...</option>
@@ -130,25 +159,55 @@ export function AreaModal({ isOpen, onClose, projectId, groups, onGroupCreated, 
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="areaNumber">Area Number</Label>
-              <Input id="areaNumber" placeholder="e.g. 001" value={areaNumber} onChange={(e) => setAreaNumber(e.target.value)} required />
+          {/* Area number + name */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="areaNumber">
+                Area Number <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="areaNumber"
+                placeholder="e.g. 001"
+                value={areaNumber}
+                onChange={(e) => setAreaNumber(e.target.value)}
+                required
+                autoFocus={!isEditing}
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Area Name</Label>
-              <Input id="name" placeholder="e.g. Jakarta Selatan Block A" value={name} onChange={(e) => setName(e.target.value)} required />
+            <div className="space-y-1.5">
+              <Label htmlFor="name">
+                Area Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="name"
+                placeholder="e.g. Pucung Barat"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
             </div>
           </div>
-          
-          <div className="space-y-2">
+
+          {/* Description */}
+          <div className="space-y-1.5">
             <Label htmlFor="description">Description</Label>
-            <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Textarea
+              id="description"
+              placeholder="Optional notes about this area..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              className="resize-none"
+            />
           </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>Cancel</Button>
-            <Button type="submit" disabled={isLoading}>{isLoading ? "Saving..." : "Save Area"}</Button>
+
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading || (!isEditing && groups.length === 0)}>
+              {isLoading ? "Saving..." : isEditing ? "Update Area" : "Save Area"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -158,9 +217,9 @@ export function AreaModal({ isOpen, onClose, projectId, groups, onGroupCreated, 
       isOpen={isGroupModalOpen}
       onClose={() => setIsGroupModalOpen(false)}
       projectId={projectId}
-      onSuccess={() => {
+      onSuccess={async () => {
         setIsGroupModalOpen(false);
-        onGroupCreated?.();
+        await onGroupCreated?.();
       }}
     />
   </>);
