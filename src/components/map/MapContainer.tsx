@@ -7,6 +7,114 @@ import { useMapStore } from "@/lib/store/mapStore";
 
 type ToolMode = "select" | "pen";
 
+// ─── EWKB decoder ────────────────────────────────────────────────────────────
+// Supabase/PostgREST returns PostGIS geometry columns as EWKB hex strings by
+// default. This lightweight decoder converts them back to GeoJSON so MapLibre
+// can render them.
+function ewkbHexToGeoJSON(hex: string): any | null {
+  try {
+    // Convert hex string to byte array
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+    }
+
+    const view = new DataView(bytes.buffer);
+    let offset = 0;
+
+    const byteOrder = view.getUint8(offset++);
+    const le = byteOrder === 1; // 1 = little-endian
+
+    const readUint32 = () => { const v = view.getUint32(offset, le); offset += 4; return v; };
+    const readFloat64 = () => { const v = view.getFloat64(offset, le); offset += 8; return v; };
+
+    let wkbType = readUint32();
+
+    // EWKB flags
+    const hasZ = (wkbType & 0x80000000) !== 0;
+    const hasM = (wkbType & 0x40000000) !== 0;
+    const hasSRID = (wkbType & 0x20000000) !== 0;
+    wkbType = wkbType & 0x0fffffff;
+
+    if (hasSRID) readUint32(); // skip SRID
+
+    const readPoint = (): [number, number] => {
+      const x = readFloat64();
+      const y = readFloat64();
+      if (hasZ) readFloat64();
+      if (hasM) readFloat64();
+      return [x, y];
+    };
+
+    const readRing = (): [number, number][] => {
+      const count = readUint32();
+      const pts: [number, number][] = [];
+      for (let i = 0; i < count; i++) pts.push(readPoint());
+      return pts;
+    };
+
+    if (wkbType === 1) {
+      // Point
+      return { type: "Point", coordinates: readPoint() };
+    } else if (wkbType === 2) {
+      // LineString
+      const count = readUint32();
+      const pts: [number, number][] = [];
+      for (let i = 0; i < count; i++) pts.push(readPoint());
+      return { type: "LineString", coordinates: pts };
+    } else if (wkbType === 3) {
+      // Polygon
+      const numRings = readUint32();
+      const rings: [number, number][][] = [];
+      for (let i = 0; i < numRings; i++) rings.push(readRing());
+      return { type: "Polygon", coordinates: rings };
+    } else if (wkbType === 6) {
+      // MultiPolygon
+      const numGeoms = readUint32();
+      const polys: [number, number][][][] = [];
+      for (let i = 0; i < numGeoms; i++) {
+        // Each geometry starts with its own byte order + type
+        offset++; // byteOrder
+        let subType = readUint32();
+        const subHasSRID = (subType & 0x20000000) !== 0;
+        if (subHasSRID) readUint32();
+        subType = subType & 0x0fffffff;
+        const numRings = readUint32();
+        const rings: [number, number][][] = [];
+        for (let j = 0; j < numRings; j++) rings.push(readRing());
+        polys.push(rings);
+      }
+      return { type: "MultiPolygon", coordinates: polys };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Resolve geometry from an area object — handles GeoJSON objects, JSON strings,
+// and raw EWKB hex strings returned by PostgREST for PostGIS geometry columns.
+function resolveGeometry(area: any): any | null {
+  // 1. Try dedicated geojson field first
+  let geo = area.geojson ?? area.geometry;
+  if (!geo) return null;
+
+  // 2. If it's already an object with a recognised GeoJSON type, use it directly
+  if (typeof geo === "object" && geo !== null && geo.type) return geo;
+
+  // 3. JSON-encoded GeoJSON string: starts with '{'
+  if (typeof geo === "string" && geo.trimStart().startsWith("{")) {
+    try { return JSON.parse(geo); } catch { return null; }
+  }
+
+  // 4. EWKB hex string: all hex characters (0-9, a-f, A-F)
+  if (typeof geo === "string" && /^[0-9a-fA-F]+$/.test(geo)) {
+    return ewkbHexToGeoJSON(geo);
+  }
+
+  return null;
+}
+
 interface MapContainerProps {
   areas: any[];
   onAreaCreate?: (feature: any) => void;
@@ -431,24 +539,23 @@ export function MapContainer({
   // ── Sync areas GeoJSON ────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
-      const validFeatures = [];
-      for (const a of areas) {
-        let geo = a.geojson || a.geometry;
-        if (typeof geo === 'string' && geo.startsWith('{')) {
-          try { geo = JSON.parse(geo); } catch (e) {}
-        }
-        if (geo && typeof geo === 'object' && geo.type) {
-          validFeatures.push({
-            type: "Feature", id: a.id, geometry: geo,
-            properties: { ...a, color: a.groups?.color || "#ef4444" },
-          });
-        }
+    const validFeatures: any[] = [];
+    for (const a of areas) {
+      const geo = resolveGeometry(a);
+      if (geo) {
+        validFeatures.push({
+          type: "Feature",
+          id: a.id,
+          geometry: geo,
+          properties: { ...a, color: a.groups?.color || a.group_color || "#ef4444" },
+        });
       }
-      
-      (map.current.getSource("areas-source") as maplibregl.GeoJSONSource)?.setData({
-        type: "FeatureCollection",
-        features: validFeatures,
-      } as any);
+    }
+
+    (map.current.getSource("areas-source") as maplibregl.GeoJSONSource)?.setData({
+      type: "FeatureCollection",
+      features: validFeatures,
+    } as any);
   }, [areas, mapLoaded]);
 
   // ── Sync fill/line style live ─────────────────────────────────────────────
@@ -493,11 +600,13 @@ export function MapContainer({
   // ── Vertex editing helpers ────────────────────────────────────────────────
   const startEditVertices = useCallback((areaId: string) => {
     const area = areasRef.current.find(a => a.id === areaId);
-    if (!area?.geometry) return;
+    if (!area) return;
+    const geo = resolveGeometry(area);
+    if (!geo) return;
     editingAreaIdRef.current = areaId;
-    editGeometryRef.current = area.geometry;
+    editGeometryRef.current = geo;
     setEditingAreaId(areaId);
-    setEditSource(area.geometry);
+    setEditSource(geo);
   }, [setEditSource]);
 
   const stopEditVertices = useCallback(() => {
