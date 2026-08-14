@@ -6,6 +6,28 @@ import { revalidatePath } from "next/cache";
 // Array of vibrant colors for new groups
 const GROUP_COLORS = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#22c55e", "#06b6d4", "#3b82f6", "#6366f1", "#a855f7", "#ec4899"];
 
+function stripZ(geom: any): any {
+  if (!geom) return geom;
+  if (geom.type === "GeometryCollection") {
+    return {
+      ...geom,
+      geometries: geom.geometries.map(stripZ)
+    };
+  }
+
+  const stripCoords = (coords: any[]): any[] => {
+    if (typeof coords[0] === 'number') {
+      return [coords[0], coords[1]];
+    }
+    return coords.map(stripCoords);
+  };
+
+  return {
+    ...geom,
+    coordinates: stripCoords(geom.coordinates)
+  };
+}
+
 export async function importKMLData(projectId: string, parsedGroups: { name: string; features: any[] }[]) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -151,7 +173,7 @@ export async function importKMLData(projectId: string, parsedGroups: { name: str
           area_number,
           name,
           description,
-          geometry: feature.geometry,
+          geometry: stripZ(feature.geometry),
           center_lng,
           center_lat,
           created_by: user.id
@@ -159,6 +181,7 @@ export async function importKMLData(projectId: string, parsedGroups: { name: str
 
         if (areaError) {
           console.error("Error inserting area from KML:", areaError);
+          return { error: `Failed to insert area ${name}: ${areaError.message}` };
         }
 
         areaIndex++;
