@@ -100,11 +100,25 @@ function resolveGeometry(area: any): any | null {
   if (!geo) return null;
 
   // 2. If it's already an object with a recognised GeoJSON type, use it directly
-  if (typeof geo === "object" && geo !== null && geo.type) return geo;
+  if (typeof geo === "object" && geo !== null && geo.type) {
+    if (geo.crs) {
+      // Strip 'crs' as it is deprecated in RFC 7946 and can cause MapLibre to reject the feature
+      const { crs, ...rest } = geo;
+      return rest;
+    }
+    return geo;
+  }
 
   // 3. JSON-encoded GeoJSON string: starts with '{'
   if (typeof geo === "string" && geo.trimStart().startsWith("{")) {
-    try { return JSON.parse(geo); } catch { return null; }
+    try { 
+      const parsed = JSON.parse(geo); 
+      if (parsed.crs) {
+        const { crs, ...rest } = parsed;
+        return rest;
+      }
+      return parsed;
+    } catch { return null; }
   }
 
   // 4. EWKB hex string: all hex characters (0-9, a-f, A-F)
@@ -399,7 +413,11 @@ export function MapContainer({
       setTimeout(() => { try { geolocate.trigger(); } catch {} }, 1000);
 
       // ── Areas source + layers ─────────────────────────────────────────
-      m.addSource("areas-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      m.addSource("areas-source", { 
+        type: "geojson", 
+        data: { type: "FeatureCollection", features: [] },
+        promoteId: "id" // Allows UUIDs to be used in feature-state
+      });
       m.addLayer({ id: "areas-fill", type: "fill", source: "areas-source",
         paint: { "fill-color": ["get", "color"], "fill-opacity": 0.3 } });
       m.addLayer({ id: "areas-outline", type: "line", source: "areas-source",
@@ -560,7 +578,7 @@ export function MapContainer({
         });
       }
     }
-    console.log("[MapDebug] validFeatures:", validFeatures.length);
+    console.log("[MapDebug] validFeatures:", validFeatures.length, validFeatures[0]);
 
     (map.current.getSource("areas-source") as maplibregl.GeoJSONSource)?.setData({
       type: "FeatureCollection",
