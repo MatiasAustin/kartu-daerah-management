@@ -23,7 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-[100dvh] overflow-hidden antialiased`}
     >
-      <body className="h-full flex flex-col overflow-y-auto">
+      <body className="h-full flex flex-col overflow-hidden overscroll-none">
         {children}
         <div className="fixed bottom-2 right-2 z-[9999] pointer-events-none opacity-60">
           <span className="text-[10px] font-mono text-slate-800 bg-white/70 px-1.5 py-0.5 rounded backdrop-blur-sm border border-slate-200/50 drop-shadow-sm">

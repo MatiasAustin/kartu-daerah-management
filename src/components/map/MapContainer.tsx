@@ -422,7 +422,7 @@ export function MapContainer({
     map.current.addControl(new maplibregl.NavigationControl(), "top-right");
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: { enableHighAccuracy: true },
-      trackUserLocation: true,
+      trackUserLocation: false,
     } as any);
     map.current.addControl(geolocate, "top-right");
 
@@ -430,9 +430,6 @@ export function MapContainer({
       const m = map.current!;
       setMapLoaded(true);
       setMap(m);
-
-      // Auto-trigger geolocation
-      setTimeout(() => { try { geolocate.trigger(); } catch {} }, 1000);
 
       // ── Areas source + layers ─────────────────────────────────────────
       m.addSource("areas-source", { 
