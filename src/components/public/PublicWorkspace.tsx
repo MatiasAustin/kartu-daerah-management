@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MapContainer, resolveGeometry } from "@/components/map/MapContainer";
 import { useMapStore } from "@/lib/store/mapStore";
-import { ChevronDown, ChevronRight, MapPin, FolderOpen } from "lucide-react";
+import { ChevronDown, ChevronRight, MapPin, FolderOpen, Share2, Printer, Navigation } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PublicWorkspaceProps {
@@ -152,23 +152,64 @@ export function PublicWorkspace({ project, groups, areas, isGroupShare }: Public
 
 function AreaItem({ area, isSelected, onClick }: { area: any, isSelected: boolean, onClick: () => void }) {
   const color = area.groups?.color || area.group_color || "#ccc";
+  
+  const googleMapsUrl = area.center_lat && area.center_lng 
+    ? `https://www.google.com/maps/dir/?api=1&destination=${area.center_lat},${area.center_lng}`
+    : `https://www.google.com/maps`;
+
   return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 p-2.5 rounded-md transition-colors text-left border ${
-        isSelected ? "bg-indigo-50 border-indigo-100" : "bg-white border-transparent hover:bg-slate-50"
-      }`}
-    >
-      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-      <div className="flex flex-col overflow-hidden flex-1">
-        <span className={`text-sm font-medium truncate ${isSelected ? "text-indigo-700" : "text-slate-700"}`}>
-          {area.area_number}
-        </span>
-        <span className={`text-xs truncate ${isSelected ? "text-indigo-500" : "text-slate-500"}`}>
-          {area.name}
-        </span>
-      </div>
-      <MapPin className={`h-4 w-4 shrink-0 ${isSelected ? "text-indigo-500" : "text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"}`} />
-    </button>
+    <div className={`w-full flex flex-col rounded-md transition-colors border overflow-hidden ${
+      isSelected ? "bg-indigo-50 border-indigo-200" : "bg-white border-transparent hover:bg-slate-50"
+    }`}>
+      <button
+        onClick={onClick}
+        className="w-full flex items-center gap-3 p-2.5 text-left"
+      >
+        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+        <div className="flex flex-col overflow-hidden flex-1">
+          <span className={`text-sm font-medium truncate ${isSelected ? "text-indigo-700" : "text-slate-700"}`}>
+            {area.area_number}
+          </span>
+          <span className={`text-xs truncate ${isSelected ? "text-indigo-500" : "text-slate-500"}`}>
+            {area.name}
+          </span>
+        </div>
+        <MapPin className={`h-4 w-4 shrink-0 ${isSelected ? "text-indigo-500" : "text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"}`} />
+      </button>
+
+      {isSelected && (
+        <div className="flex items-center gap-2 px-3 pb-3 pt-1 border-t border-indigo-100 mt-1 bg-indigo-50/50">
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/view/area/${area.id}`;
+              navigator.clipboard.writeText(url);
+              alert("Link disalin!");
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded hover:bg-indigo-50 transition-colors"
+            title="Bagikan Area"
+          >
+            <Share2 className="w-3 h-3" /> Share
+          </button>
+          
+          <button
+            onClick={() => window.open(`/view/area/${area.id}`, '_blank')}
+            className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded hover:bg-indigo-50 transition-colors"
+            title="Cetak Area"
+          >
+            <Printer className="w-3 h-3" /> Print
+          </button>
+
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-white bg-indigo-600 border border-indigo-600 rounded hover:bg-indigo-700 transition-colors"
+            title="Navigasi ke Lokasi"
+          >
+            <Navigation className="w-3 h-3" /> Navigasi
+          </a>
+        </div>
+      )}
+    </div>
   );
 }
