@@ -80,28 +80,48 @@ export function MapContainer({
   // ─── Map source helpers ──────────────────────────────────────────────────────
   const setPenSource = useCallback((pts: [number, number][], mousePos: [number, number] | null) => {
     if (!map.current) return;
-    const allPts = mousePos ? [...pts, mousePos] : pts;
 
-    // Preview line/polygon fill
-    const previewFeatures: any[] = [];
-    if (allPts.length >= 3) {
-      previewFeatures.push({
+    // 1. Polygon fill preview (only when 3+ placed points)
+    const fillFeatures: any[] = [];
+    if (pts.length >= 3) {
+      const closingCoord = mousePos ?? pts[0];
+      fillFeatures.push({
         type: "Feature",
-        geometry: { type: "Polygon", coordinates: [[...allPts, allPts[0]]] },
-        properties: {},
-      });
-    } else if (allPts.length === 2) {
-      previewFeatures.push({
-        type: "Feature",
-        geometry: { type: "LineString", coordinates: allPts },
+        geometry: { type: "Polygon", coordinates: [[...pts, closingCoord, pts[0]]] },
         properties: {},
       });
     }
-    (map.current.getSource("pen-preview") as maplibregl.GeoJSONSource)?.setData({
-      type: "FeatureCollection", features: previewFeatures,
+    (map.current.getSource("pen-fill-src") as maplibregl.GeoJSONSource)?.setData({
+      type: "FeatureCollection", features: fillFeatures,
     } as any);
 
-    // Anchor dots
+    // 2. Committed path — solid thick line through all placed points
+    const pathFeatures: any[] = [];
+    if (pts.length >= 2) {
+      pathFeatures.push({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: pts },
+        properties: {},
+      });
+    }
+    (map.current.getSource("pen-path-src") as maplibregl.GeoJSONSource)?.setData({
+      type: "FeatureCollection", features: pathFeatures,
+    } as any);
+
+    // 3. Rubber band — line from last placed point to mouse cursor
+    const rubberFeatures: any[] = [];
+    if (pts.length >= 1 && mousePos) {
+      rubberFeatures.push({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: [pts[pts.length - 1], mousePos] },
+        properties: {},
+      });
+    }
+    (map.current.getSource("pen-rubber-src") as maplibregl.GeoJSONSource)?.setData({
+      type: "FeatureCollection", features: rubberFeatures,
+    } as any);
+
+    // 4. Anchor dots
     const dotFeatures = pts.map((pt, i) => ({
       type: "Feature",
       geometry: { type: "Point", coordinates: pt },
@@ -178,24 +198,36 @@ export function MapContainer({
         paint: { "text-color": "#1e293b", "text-halo-color": "#fff", "text-halo-width": 1.5 },
       });
 
-      // ── Pen preview layers ─────────────────────────────────────────────
-      // Line connecting placed points + mouse cursor
-      m.addSource("pen-preview", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      m.addLayer({ id: "pen-fill", type: "fill", source: "pen-preview", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#6366f1", "fill-opacity": 0.15 } });
-      // Make line thick, solid, and always visible
-      m.addLayer({ id: "pen-line", type: "line", source: "pen-preview", paint: { "line-color": "#6366f1", "line-width": 2.5, "line-opacity": 1 } });
-      // White outline under line for contrast on any basemap
-      m.addLayer({ id: "pen-line-outline", type: "line", source: "pen-preview", paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.5 }, layout: {} }, "pen-line");
+      // ── Pen preview layers (3 separate sources for correct z-order) ────
+      // Layer 1: Polygon fill preview (rendered FIRST = bottom)
+      m.addSource("pen-fill-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      m.addLayer({ id: "pen-fill", type: "fill", source: "pen-fill-src",
+        paint: { "fill-color": "#6366f1", "fill-opacity": 0.12 } });
 
-      // Anchor dots
+      // Layer 2: Committed path — thick solid line through placed points
+      m.addSource("pen-path-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // White halo for contrast
+      m.addLayer({ id: "pen-path-halo", type: "line", source: "pen-path-src",
+        paint: { "line-color": "#ffffff", "line-width": 7, "line-opacity": 0.8 } });
+      m.addLayer({ id: "pen-path", type: "line", source: "pen-path-src",
+        paint: { "line-color": "#4f46e5", "line-width": 3 } });
+
+      // Layer 3: Rubber band — dashed line from last point to mouse (rendered LAST = top)
+      m.addSource("pen-rubber-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      m.addLayer({ id: "pen-rubber-halo", type: "line", source: "pen-rubber-src",
+        paint: { "line-color": "#ffffff", "line-width": 7, "line-opacity": 0.8 } });
+      m.addLayer({ id: "pen-rubber", type: "line", source: "pen-rubber-src",
+        paint: { "line-color": "#f97316", "line-width": 2.5, "line-dasharray": [6, 3] } });
+
+      // Layer 4: Anchor dots (rendered on very top)
       m.addSource("pen-dots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({
         id: "pen-dots-layer", type: "circle", source: "pen-dots",
         paint: {
-          "circle-radius": ["case", ["boolean", ["get", "isStart"], false], 9, 5],
-          "circle-color": ["case", ["boolean", ["get", "isStart"], false], "#10b981", "#6366f1"],
+          "circle-radius": ["case", ["boolean", ["get", "isStart"], false], 9, 6],
+          "circle-color": ["case", ["boolean", ["get", "isStart"], false], "#10b981", "#4f46e5"],
           "circle-stroke-color": "#fff",
-          "circle-stroke-width": 2,
+          "circle-stroke-width": 2.5,
         },
       });
 
