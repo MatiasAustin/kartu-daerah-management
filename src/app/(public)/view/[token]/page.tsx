@@ -2,14 +2,19 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { MapContainer } from "@/components/map/MapContainer";
 
-export default async function PublicViewPage({ params }: { params: { token: string } }) {
+export default async function PublicViewPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
   const supabase = await createClient();
 
   // Validate Token
   const { data: share } = await supabase
     .from("public_shares")
     .select("project_id, group_id, projects(name, description)")
-    .eq("token", params.token)
+    .eq("token", token)
     .eq("is_active", true)
     .single();
 

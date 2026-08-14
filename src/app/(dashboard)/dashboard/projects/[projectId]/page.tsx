@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ProjectWorkspace } from "@/components/dashboard/ProjectWorkspace";
 import { redirect } from "next/navigation";
 
-export default async function ProjectPage({ params }: { params: { projectId: string } }) {
+export default async function ProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
+  const { projectId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -14,7 +15,7 @@ export default async function ProjectPage({ params }: { params: { projectId: str
   const { data: project } = await supabase
     .from("projects")
     .select("*")
-    .eq("id", params.projectId)
+    .eq("id", projectId)
     .single();
 
   if (!project) {
@@ -25,7 +26,7 @@ export default async function ProjectPage({ params }: { params: { projectId: str
   const { data: groups } = await supabase
     .from("groups")
     .select("*")
-    .eq("project_id", params.projectId)
+    .eq("project_id", projectId)
     .order("sort_order", { ascending: true });
 
   // Fetch Areas
@@ -35,7 +36,7 @@ export default async function ProjectPage({ params }: { params: { projectId: str
   const { data: areas } = await supabase
     .from("areas")
     .select("*, groups(color)")
-    .eq("project_id", params.projectId);
+    .eq("project_id", projectId);
 
   return (
     <div className="flex h-full w-full">

@@ -6,8 +6,9 @@ import { PrintButton } from "@/components/dashboard/PrintButton";
 export default async function PrintAreaPage({
   params,
 }: {
-  params: { projectId: string; areaId: string };
+  params: Promise<{ projectId: string; areaId: string }>;
 }) {
+  const { projectId, areaId } = await params;
   const supabase = await createClient();
 
   // Verify auth
@@ -20,10 +21,10 @@ export default async function PrintAreaPage({
   const { data: area, error: areaError } = await supabase
     .from("areas")
     .select("*")
-    .eq("id", params.areaId)
+    .eq("id", areaId)
     .single();
 
-  if (areaError || !area || area.project_id !== params.projectId) {
+  if (areaError || !area || area.project_id !== projectId) {
     return notFound();
   }
 
