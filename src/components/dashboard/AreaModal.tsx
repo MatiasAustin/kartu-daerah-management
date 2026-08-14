@@ -12,13 +12,14 @@ import { GroupModal } from "./GroupModal";
 interface AreaModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: (area: any) => void;
   projectId: string;
   groups: any[];
   onGroupCreated?: () => void;
   initialData?: any;
 }
 
-export function AreaModal({ isOpen, onClose, projectId, groups, onGroupCreated, initialData }: AreaModalProps) {
+export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGroupCreated, initialData }: AreaModalProps) {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
 
   const isEditing = !!initialData?.id && !!initialData?.group_id;
@@ -104,6 +105,16 @@ export function AreaModal({ isOpen, onClose, projectId, groups, onGroupCreated, 
     if (res?.error) {
       setError(res.error);
     } else {
+      // After saving, fetch the fresh area record (with geojson geometry) from Supabase
+      if (onSuccess) {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data: freshAreas } = await supabase
+          .from("areas")
+          .select("*, groups(color)")
+          .eq("project_id", projectId);
+        onSuccess(freshAreas || []);
+      }
       onClose();
     }
   };

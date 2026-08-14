@@ -5,22 +5,34 @@ import { MapContainer } from "@/components/map/MapContainer";
 import { useMapStore } from "@/lib/store/mapStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, ChevronRight, MapPin, Users, Share2, ListFilter } from "lucide-react";
+import { Plus, Search, ChevronRight, MapPin, Users, Share2, ListFilter, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Import Modals
 import { GroupModal } from "./GroupModal";
 import { AreaModal } from "./AreaModal";
 import { ManagerModal } from "./ManagerModal";
 import { ShareModal } from "./ShareModal";
+import { deleteArea } from "@/app/actions/areaActions";
+import { deleteGroup } from "@/app/actions/groupActions";
 
 export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) {
   const [areas, setAreas] = useState(initialAreas);
   const [groups, setGroups] = useState(initialGroups);
   const [activeGroupFilter, setActiveGroupFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   const { selectedAreaId, setSelectedAreaId, flyToArea } = useMapStore();
 
   useEffect(() => {
@@ -33,10 +45,10 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
 
   // Modal States
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
-  
+
   const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [areaFormData, setAreaFormData] = useState<any>(null);
-  
+
   const [isManagerModalOpen, setIsManagerModalOpen] = useState(false);
   const [selectedGroupForManager, setSelectedGroupForManager] = useState<any>(null);
 
@@ -44,6 +56,11 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
   const [shareTarget, setShareTarget] = useState<{ id?: string, name: string, isProject: boolean } | null>(null);
 
   const [isMobileListOpen, setIsMobileListOpen] = useState(false);
+
+  // Delete confirmation state
+  const [deleteAreaTarget, setDeleteAreaTarget] = useState<any>(null);
+  const [deleteGroupTarget, setDeleteGroupTarget] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleAreaClick = (area: any) => {
     setSelectedAreaId(area.id);
@@ -68,16 +85,49 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
     setIsShareModalOpen(true);
   };
 
+  const handleDeleteArea = async () => {
+    if (!deleteAreaTarget) return;
+    setIsDeleting(true);
+    const res = await deleteArea(deleteAreaTarget.id, project.id);
+    setIsDeleting(false);
+    if (!res?.error) {
+      setAreas((prev: any[]) => prev.filter((a: any) => a.id !== deleteAreaTarget.id));
+      if (selectedAreaId === deleteAreaTarget.id) setSelectedAreaId(null);
+    }
+    setDeleteAreaTarget(null);
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!deleteGroupTarget) return;
+    setIsDeleting(true);
+    const res = await deleteGroup(deleteGroupTarget.id, project.id);
+    setIsDeleting(false);
+    if (!res?.error) {
+      setGroups((prev: any[]) => prev.filter((g: any) => g.id !== deleteGroupTarget.id));
+      // Remove areas belonging to this group from local state
+      setAreas((prev: any[]) => prev.filter((a: any) => a.group_id !== deleteGroupTarget.id));
+      if (activeGroupFilter === deleteGroupTarget.id) setActiveGroupFilter(null);
+    }
+    setDeleteGroupTarget(null);
+  };
+
+  const refreshGroups = async () => {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("groups")
+      .select("*")
+      .eq("project_id", project.id)
+      .order("sort_order");
+    if (data) setGroups(data);
+  };
+
   const filteredAreas = areas.filter((a: any) => {
-    // 1. Group Filter
     if (activeGroupFilter && a.group_id !== activeGroupFilter) return false;
-    
-    // 2. Search Filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const areaGroup = groups.find((g: any) => g.id === a.group_id);
       const groupName = areaGroup?.name?.toLowerCase() || "";
-      
       return (
         a.name?.toLowerCase().includes(q) ||
         a.area_number?.toLowerCase().includes(q) ||
@@ -85,7 +135,6 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
         groupName.includes(q)
       );
     }
-    
     return true;
   });
 
@@ -94,10 +143,10 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
       <div className="p-4 border-b border-slate-200 bg-slate-50 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900 truncate pr-2">{project.name}</h2>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-8 w-8 p-0 shrink-0" 
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0 shrink-0"
             title="Share Project"
             onClick={() => openShareModal({ name: project.name, isProject: true })}
           >
@@ -115,9 +164,10 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
           />
         </div>
       </div>
-      
+
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
+          {/* GROUPS */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Groups</h3>
@@ -142,23 +192,32 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                     <span className="truncate">{group.name}</span>
                   </button>
                   <div className="flex items-center md:opacity-0 group-hover/item:opacity-100 transition-opacity">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 w-6 p-0" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
                       title="Share Group"
                       onClick={() => openShareModal({ id: group.id, name: group.name, isProject: false })}
                     >
                       <Share2 className="h-3.5 w-3.5 text-slate-400 hover:text-indigo-500" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 w-6 p-0 ml-1" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 ml-1"
                       title="Manage Group Users"
                       onClick={() => openManagerModal(group)}
                     >
                       <Users className="h-4 w-4 text-slate-400 hover:text-indigo-500" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 ml-1"
+                      title="Delete Group"
+                      onClick={() => setDeleteGroupTarget(group)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
                     </Button>
                   </div>
                 </div>
@@ -166,6 +225,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
             </div>
           </div>
 
+          {/* AREAS */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Areas</h3>
@@ -175,17 +235,24 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                 <p className="text-sm text-slate-400 py-2">No areas found.</p>
               ) : (
                 filteredAreas.map((area: any) => (
-                  <button
-                    key={area.id}
-                    onClick={() => handleAreaClick(area)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors group ${selectedAreaId === area.id ? "bg-indigo-50 text-indigo-700 border border-indigo-100" : "text-slate-700 hover:bg-slate-50 border border-transparent"}`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
+                  <div key={area.id} className={`flex items-center justify-between rounded-md transition-colors group/area ${selectedAreaId === area.id ? "bg-indigo-50 border border-indigo-100" : "border border-transparent hover:bg-slate-50"}`}>
+                    <button
+                      onClick={() => handleAreaClick(area)}
+                      className={`flex-1 flex items-center gap-2 px-3 py-2 text-sm truncate ${selectedAreaId === area.id ? "text-indigo-700" : "text-slate-700"}`}
+                    >
                       <MapPin className={`h-4 w-4 shrink-0 ${selectedAreaId === area.id ? "text-indigo-500" : "text-slate-400"}`} />
                       <span className="truncate">{area.area_number} - {area.name}</span>
-                    </div>
-                    <ChevronRight className={`h-4 w-4 shrink-0 ${selectedAreaId === area.id ? "text-indigo-500 opacity-100" : "text-slate-300 opacity-0 group-hover:opacity-100"}`} />
-                  </button>
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 mr-1 md:opacity-0 group-hover/area:opacity-100 transition-opacity"
+                      title="Delete Area"
+                      onClick={(e) => { e.stopPropagation(); setDeleteAreaTarget(area); }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
+                    </Button>
+                  </div>
                 ))
               )}
             </div>
@@ -197,7 +264,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
 
   return (
     <div className="flex h-full w-full relative overflow-hidden">
-      
+
       {/* Desktop Sidebar */}
       <div className="hidden md:flex w-80 bg-white border-r border-slate-200 flex-col h-full shadow-sm z-10 shrink-0">
         <SidebarContent />
@@ -219,7 +286,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
 
       {/* Map Area */}
       <div className="flex-1 relative w-full h-full">
-        <MapContainer 
+        <MapContainer
           areas={areas}
           onAreaCreate={handleMapAreaCreate}
           onAreaUpdate={(areaId, geometry) => {
@@ -227,16 +294,14 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
           }}
           onAreaDelete={(id) => setAreas((prev: any[]) => prev.filter((a: any) => a.id !== id))}
         />
-        
+
         {/* Selected Area Panel overlay */}
         {selectedAreaId && (
           <div className="absolute bottom-0 left-0 w-full rounded-t-xl md:bottom-auto md:top-4 md:right-4 md:left-auto md:w-80 bg-white md:rounded-xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-lg border border-slate-200 overflow-hidden z-20 transition-all">
             {(() => {
               const selectedArea = areas.find((a: any) => a.id === selectedAreaId);
               if (!selectedArea) return null;
-              
               const group = groups.find((g: any) => g.id === selectedArea.group_id);
-              
               return (
                 <div className="max-h-[50vh] md:max-h-none flex flex-col">
                   <div className="h-1 w-12 bg-slate-200 rounded-full mx-auto mt-2 md:hidden shrink-0" />
@@ -254,18 +319,18 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                       <div className="w-2 h-2 rounded-full mr-1.5 shrink-0" style={{ backgroundColor: group?.color || "#cbd5e1" }} />
                       {group?.name || "Unknown Group"}
                     </div>
-                    
+
                     <div className="space-y-4">
                       <div>
                         <h4 className="text-xs font-medium text-slate-500 mb-1">Description</h4>
                         <p className="text-sm text-slate-700">{selectedArea.description || "No description provided."}</p>
                       </div>
-                      
+
                       <div className="flex flex-col gap-2 pt-4 border-t border-slate-100">
                         <div className="flex gap-2">
-                          <Button 
-                            className="flex-1 text-xs" 
-                            variant="outline" 
+                          <Button
+                            className="flex-1 text-xs"
+                            variant="outline"
                             size="sm"
                             onClick={() => {
                               setAreaFormData(selectedArea);
@@ -274,8 +339,8 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                           >
                             Edit Details
                           </Button>
-                          <Button 
-                            className="flex-1 text-xs" 
+                          <Button
+                            className="flex-1 text-xs"
                             variant="outline"
                             size="sm"
                             onClick={() => {
@@ -287,14 +352,25 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                             Edit Anchors
                           </Button>
                         </div>
-                        <Button 
-                          className="w-full text-xs" 
-                          variant="default" 
-                          size="sm"
-                          onClick={() => window.open(`/dashboard/projects/${project.id}/areas/${selectedArea.id}/print`, '_blank')}
-                        >
-                          Print Card
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            className="flex-1 text-xs"
+                            variant="default"
+                            size="sm"
+                            onClick={() => window.open(`/dashboard/projects/${project.id}/areas/${selectedArea.id}/print`, '_blank')}
+                          >
+                            Print Card
+                          </Button>
+                          <Button
+                            className="flex-1 text-xs"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeleteAreaTarget(selectedArea)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1 text-red-400" />
+                            <span className="text-red-500">Delete</span>
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </ScrollArea>
@@ -306,27 +382,24 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
       </div>
 
       {/* Modals */}
-      <GroupModal 
-        isOpen={isGroupModalOpen} 
-        onClose={() => setIsGroupModalOpen(false)} 
+      <GroupModal
+        isOpen={isGroupModalOpen}
+        onClose={() => setIsGroupModalOpen(false)}
         projectId={project.id}
         onSuccess={async () => {
-          // Refresh groups list so new/updated groups appear in sidebar immediately
-          const { createClient } = await import("@/lib/supabase/client");
-          const supabase = createClient();
-          const { data } = await supabase
-            .from("groups")
-            .select("*")
-            .eq("project_id", project.id)
-            .order("sort_order");
-          if (data) setGroups(data);
+          await refreshGroups();
           setIsGroupModalOpen(false);
         }}
       />
-      
+
       <AreaModal
         isOpen={isAreaModalOpen}
         onClose={() => {
+          setIsAreaModalOpen(false);
+          setAreaFormData(null);
+        }}
+        onSuccess={(freshAreas) => {
+          setAreas(freshAreas);
           setIsAreaModalOpen(false);
           setAreaFormData(null);
         }}
@@ -334,11 +407,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
         groups={groups}
         initialData={areaFormData}
         onGroupCreated={async () => {
-          // Refresh groups list after inline group creation
-          const { createClient } = await import("@/lib/supabase/client");
-          const supabase = createClient();
-          const { data } = await supabase.from("groups").select("*").eq("project_id", project.id).order("sort_order");
-          if (data) setGroups(data);
+          await refreshGroups();
         }}
       />
 
@@ -367,6 +436,50 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
           title={shareTarget.name}
         />
       )}
+
+      {/* Delete Area Confirmation */}
+      <AlertDialog open={!!deleteAreaTarget} onOpenChange={(o) => !o && setDeleteAreaTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Area</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deleteAreaTarget?.area_number} – {deleteAreaTarget?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteArea}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? "Deleting..." : "Delete Area"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Group Confirmation */}
+      <AlertDialog open={!!deleteGroupTarget} onOpenChange={(o) => !o && setDeleteGroupTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete group <strong>{deleteGroupTarget?.name}</strong>? All areas in this group will also be deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteGroup}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? "Deleting..." : "Delete Group"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
