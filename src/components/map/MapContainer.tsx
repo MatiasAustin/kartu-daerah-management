@@ -5,6 +5,10 @@ import * as maplibregl from "maplibre-gl";
 import type * as MapLibreTypes from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useMapStore } from "@/lib/store/mapStore";
+import { MapStyleToggle } from "./MapStyleToggle";
+
+const CLEAN_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+const DETAILED_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
 if (typeof window !== "undefined") {
   // Bypass Next.js dynamic route HTML resolution for relative worker chunks
@@ -159,22 +163,6 @@ interface MapContainerProps {
   readOnly?: boolean;
 }
 
-const RASTER_STYLE: any = {
-  version: 8,
-  sources: {
-    carto: {
-      type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-      ],
-      tileSize: 256,
-      attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
-    },
-  },
-  layers: [{ id: "carto", type: "raster", source: "carto", minzoom: 0, maxzoom: 22 }],
-};
 
 export function MapContainer({
   areas,
@@ -186,8 +174,11 @@ export function MapContainer({
   const mapContainer = useRef<HTMLDivElement>(null);
   const overlayCanvas = useRef<HTMLCanvasElement>(null); // ← Canvas overlay for pen tool
   const map = useRef<MapLibreTypes.Map | null>(null);
+  const mapStyle = useMapStore((state) => state.mapStyle);
   const { setMap, setSelectedAreaId, selectedAreaId } = useMapStore();
+  
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [styleVersion, setStyleVersion] = useState(0);
 
   // ── Tool state ──────────────────────────────────────────────────────────────
   const [toolMode, setToolMode] = useState<ToolMode>("select");
@@ -414,7 +405,7 @@ export function MapContainer({
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: RASTER_STYLE,
+      style: mapStyle === "detailed" ? DETAILED_STYLE : CLEAN_STYLE,
       center: [106.8272, -6.1751],
       zoom: 11,
     });
@@ -426,37 +417,55 @@ export function MapContainer({
     } as any);
     map.current.addControl(geolocate, "top-right");
 
+    const addAreaLayers = (m: maplibregl.Map) => {
+      // ── Areas source + layers ─────────────────────────────────────────
+      if (!m.getSource("areas-source")) {
+        m.addSource("areas-source", { 
+          type: "geojson", 
+          data: { type: "FeatureCollection", features: [] },
+          promoteId: "id"
+        });
+      }
+      if (!m.getLayer("areas-fill")) {
+        m.addLayer({ id: "areas-fill", type: "fill", source: "areas-source",
+          paint: { "fill-color": ["get", "color"], "fill-opacity": 0.3 } });
+      }
+      if (!m.getLayer("areas-outline")) {
+        m.addLayer({ id: "areas-outline", type: "line", source: "areas-source",
+          paint: { "line-color": ["get", "color"], "line-width": 2 } });
+      }
+      if (!m.getLayer("areas-label")) {
+        m.addLayer({
+          id: "areas-label", type: "symbol", source: "areas-source",
+          layout: { "text-field": ["concat", ["get", "area_number"], " ", ["get", "name"]],
+            "text-size": 11, "text-anchor": "center", "text-max-width": 8 },
+          paint: { "text-color": "#1e293b", "text-halo-color": "#fff", "text-halo-width": 1.5 },
+        });
+      }
+
+      // ── Edit vertex layers ────────────────────────────────────────────
+      if (!m.getSource("edit-verts")) {
+        m.addSource("edit-verts", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      }
+      if (!m.getLayer("edit-ring")) {
+        m.addLayer({ id: "edit-ring", type: "line", source: "edit-verts",
+          filter: ["==", ["get", "type"], "ring"],
+          paint: { "line-color": "#f59e0b", "line-width": 2, "line-dasharray": [4, 2] } });
+      }
+      if (!m.getLayer("edit-handles")) {
+        m.addLayer({ id: "edit-handles", type: "circle", source: "edit-verts",
+          filter: ["!=", ["geometry-type"], "LineString"],
+          paint: { "circle-radius": 7, "circle-color": "#f59e0b",
+            "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
+      }
+    };
+
     map.current.on("load", () => {
       const m = map.current!;
       setMapLoaded(true);
       setMap(m);
 
-      // ── Areas source + layers ─────────────────────────────────────────
-      m.addSource("areas-source", { 
-        type: "geojson", 
-        data: { type: "FeatureCollection", features: [] },
-        promoteId: "id" // Allows UUIDs to be used in feature-state
-      });
-      m.addLayer({ id: "areas-fill", type: "fill", source: "areas-source",
-        paint: { "fill-color": ["get", "color"], "fill-opacity": 0.3 } });
-      m.addLayer({ id: "areas-outline", type: "line", source: "areas-source",
-        paint: { "line-color": ["get", "color"], "line-width": 2 } });
-      m.addLayer({
-        id: "areas-label", type: "symbol", source: "areas-source",
-        layout: { "text-field": ["concat", ["get", "area_number"], " ", ["get", "name"]],
-          "text-size": 11, "text-anchor": "center", "text-max-width": 8 },
-        paint: { "text-color": "#1e293b", "text-halo-color": "#fff", "text-halo-width": 1.5 },
-      });
-
-      // ── Edit vertex layers ────────────────────────────────────────────
-      m.addSource("edit-verts", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      m.addLayer({ id: "edit-ring", type: "line", source: "edit-verts",
-        filter: ["==", ["get", "type"], "ring"],
-        paint: { "line-color": "#f59e0b", "line-width": 2, "line-dasharray": [4, 2] } });
-      m.addLayer({ id: "edit-handles", type: "circle", source: "edit-verts",
-        filter: ["!=", ["geometry-type"], "LineString"],
-        paint: { "circle-radius": 7, "circle-color": "#f59e0b",
-          "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
+      addAreaLayers(m);
 
       // ── Area selection click ──────────────────────────────────────────
       m.on("click", "areas-fill", (e) => {
@@ -567,8 +576,20 @@ export function MapContainer({
       });
     });
 
+    map.current.on("style.load", () => {
+      const m = map.current!;
+      addAreaLayers(m);
+      setStyleVersion(v => v + 1);
+    });
+
     return () => { map.current?.remove(); map.current = null; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Handle Style Changes ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    map.current.setStyle(mapStyle === "detailed" ? DETAILED_STYLE : CLEAN_STYLE);
+  }, [mapStyle, mapLoaded]);
 
   // ── Sync areas GeoJSON ────────────────────────────────────────────────────
   useEffect(() => {
@@ -624,7 +645,7 @@ export function MapContainer({
     } else {
       console.log("[MapDebug] SOURCE IS UNDEFINED! Cannot set data.");
     }
-  }, [areas, mapLoaded]);
+  }, [areas, mapLoaded, styleVersion]); // Sync data when style/layers are reloaded
 
   // ── Sync fill/line style live ─────────────────────────────────────────────
   useEffect(() => {
@@ -700,6 +721,7 @@ export function MapContainer({
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="relative w-full h-full">
+      <MapStyleToggle />
       {/* Map GL canvas */}
       <div ref={mapContainer} className="w-full h-full" />
 
