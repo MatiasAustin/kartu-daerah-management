@@ -89,14 +89,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
     if (!m.getSource(sourceId)) {
       m.addSource(sourceId, {
         type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: [{
-            type: "Feature",
-            geometry: area.geometry,
-            properties: {}
-          }]
-        } as any,
+        data: { type: "FeatureCollection", features: [] }
       });
 
       m.addLayer({
@@ -118,6 +111,20 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
           "line-width": 3
         }
       });
+    }
+
+    // Now set the data
+    const source = m.getSource(sourceId) as maplibregl.GeoJSONSource;
+    if (source) {
+      source.setData({
+        type: "FeatureCollection",
+        features: [{
+          type: "Feature",
+          geometry: area.geometry,
+          properties: {}
+        }]
+      } as any);
+    }
 
       // Calculate Bounding Box to fit map automatically
       let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
@@ -144,6 +151,9 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
           );
         }
       }
+      
+      // Force repaint since interactive is false
+      m.triggerRepaint();
     }
   }, [mapLoaded, area, group]);
 
