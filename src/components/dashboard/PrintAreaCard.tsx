@@ -154,7 +154,6 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       
       // Force repaint since interactive is false
       m.triggerRepaint();
-    }
   }, [mapLoaded, area, group]);
 
   return (
