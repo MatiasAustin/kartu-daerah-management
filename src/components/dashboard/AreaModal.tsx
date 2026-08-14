@@ -57,13 +57,15 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
       setError("Please select or create a group first.");
       return;
     }
-    if (!name.trim()) {
-      setError("Area name is required.");
-      return;
-    }
-    if (!areaNumber.trim()) {
-      setError("Area number is required.");
-      return;
+    if (isEditing) {
+      if (!name.trim()) {
+        setError("Area name is required.");
+        return;
+      }
+      if (!areaNumber.trim()) {
+        setError("Area number is required.");
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -124,8 +126,8 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
             type: "create",
             area: {
               ...(createdArea || {}),
-              area_number: areaNumber,
-              name,
+              area_number: createdArea?.area_number || areaNumber,
+              name: createdArea?.name || name,
               description,
               group_id: groupId,
               geometry: initialData?.geometry, // the raw drawn GeoJSON polygon
@@ -190,34 +192,40 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
             </div>
           )}
 
-          {/* Area number + name */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="areaNumber">
-                Area Number <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="areaNumber"
-                placeholder="e.g. 001"
-                value={areaNumber}
-                onChange={(e) => setAreaNumber(e.target.value)}
-                required
-                autoFocus={!isEditing}
-              />
+          {/* Area number + name (Only visible when editing, auto-generated on create) */}
+          {isEditing ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="areaNumber">
+                  Area Number <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="areaNumber"
+                  placeholder="e.g. 001"
+                  value={areaNumber}
+                  onChange={(e) => setAreaNumber(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="name">
+                  Area Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. Pucung Barat"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="name">
-                Area Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                placeholder="e.g. Pucung Barat"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+          ) : (
+            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700 flex flex-col gap-1">
+              <p className="font-medium">✨ Auto-Naming & Numbering Active</p>
+              <p className="text-xs opacity-80">The area name and number will be automatically generated based on the location when you save.</p>
             </div>
-          </div>
+          )}
 
           {/* Description */}
           <div className="space-y-1.5">

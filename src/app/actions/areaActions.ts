@@ -15,13 +15,74 @@ export async function createArea(
     return { error: "Not authenticated" };
   }
 
+  // 1. Resolve Location Name (Reverse Geocoding)
+  let resolvedName = data.name;
+  if (!resolvedName && data.center_lng && data.center_lat) {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${data.center_lat}&lon=${data.center_lng}&format=jsonv2`, {
+        headers: { 'User-Agent': 'KartuDaerahApp/1.0' }
+      });
+      if (res.ok) {
+        const geoData = await res.json();
+        if (geoData?.address) {
+          resolvedName = geoData.address.village || geoData.address.suburb || geoData.address.neighbourhood || geoData.address.town || geoData.address.city || "Unknown Area";
+        }
+      }
+    } catch (e) {
+      console.error("Geocoding failed", e);
+    }
+  }
+  if (!resolvedName) resolvedName = "New Area";
+
+  // 2. Resolve Unique Name
+  const { data: existingNames } = await supabase
+    .from("areas")
+    .select("name")
+    .eq("project_id", projectId)
+    .ilike("name", `${resolvedName}%`);
+
+  if (existingNames && existingNames.length > 0) {
+    const nameSet = new Set(existingNames.map(d => d.name));
+    if (nameSet.has(resolvedName)) {
+      let counter = 1;
+      while (nameSet.has(`${resolvedName} ${counter}`)) counter++;
+      resolvedName = `${resolvedName} ${counter}`;
+    }
+  }
+
+  // 3. Auto-Numbering (Slot Recycling)
+  let areaNumber = data.area_number;
+  if (!areaNumber) {
+    const { data: areasData } = await supabase
+      .from("areas")
+      .select("area_number")
+      .eq("project_id", projectId);
+      
+    let missingNumber = 1;
+    if (areasData) {
+      const existingNums = areasData
+        .map(a => {
+          const match = a.area_number?.match(/\d+$/);
+          return match ? parseInt(match[0], 10) : 0;
+        })
+        .filter(n => n > 0)
+        .sort((a, b) => a - b);
+
+      for (const num of existingNums) {
+        if (num === missingNumber) missingNumber++;
+        else if (num > missingNumber) break;
+      }
+    }
+    areaNumber = String(missingNumber).padStart(3, '0');
+  }
+
   // Expecting data.geometry to be a valid GeoJSON Polygon/MultiPolygon
   // We use PostGIS ST_GeomFromGeoJSON for insertion.
   const { data: created, error } = await supabase.from("areas").insert({
     project_id: projectId,
     group_id: groupId,
-    area_number: data.area_number,
-    name: data.name,
+    area_number: areaNumber,
+    name: resolvedName,
     description: data.description,
     geometry: data.geometry,
     center_lng: data.center_lng,

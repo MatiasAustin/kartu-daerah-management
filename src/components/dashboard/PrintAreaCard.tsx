@@ -217,25 +217,45 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
     <div className="min-h-screen bg-slate-100 py-8 px-4 flex flex-col items-center justify-center print:bg-white print:p-0">
       
       {/* Floating Action Bar (Hidden on print) */}
-      <div className="fixed top-6 right-6 flex flex-col items-end gap-3 print:hidden z-50">
-        <button
-          onClick={() => {
-            const url = `${window.location.origin}/view/area/${area.id}`;
-            navigator.clipboard.writeText(url);
-            alert("Public link copied to clipboard!");
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg shadow-lg hover:bg-slate-900 transition-colors font-medium"
-        >
-          Copy Share Link
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-medium"
-        >
-          <Printer className="w-4 h-4" />
-          Print / Export PDF
-        </button>
+      <div className="fixed top-6 right-6 flex flex-col items-end print:hidden z-50">
+        <div className="bg-white/90 p-4 rounded-lg shadow-lg border border-slate-200 max-w-xs text-sm mb-4">
+          <h4 className="font-bold text-slate-800 mb-2">Printing Tips</h4>
+          <ul className="text-slate-600 space-y-1 text-xs list-disc pl-4">
+            <li>Set Paper Size to <strong>A5</strong></li>
+            <li>Set Margins to <strong>None</strong></li>
+            <li>Check <strong>Background graphics</strong> to print map styling</li>
+          </ul>
+        </div>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/view/area/${area.id}`;
+              navigator.clipboard.writeText(url);
+              alert("Public link copied to clipboard!");
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg shadow-lg hover:bg-slate-900 transition-colors font-medium w-full"
+          >
+            Copy Share Link
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-medium w-full"
+          >
+            <Printer className="w-4 h-4" />
+            Print / Export PDF
+          </button>
+        </div>
       </div>
+
+      {/* Global Print Styles for A5 */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          @page {
+            size: A5;
+            margin: 0;
+          }
+        }
+      `}} />
 
       {/* A5 Card Container */}
       {/* A5 physical size is 148mm x 210mm */}
