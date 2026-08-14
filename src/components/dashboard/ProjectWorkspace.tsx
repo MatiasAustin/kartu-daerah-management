@@ -214,8 +214,10 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
         <MapContainer 
           areas={areas}
           onAreaCreate={handleMapAreaCreate}
-          onAreaUpdate={(f) => console.log("Updated:", f)}
-          onAreaDelete={(id) => console.log("Deleted:", id)}
+          onAreaUpdate={(areaId, geometry) => {
+            setAreas((prev: any[]) => prev.map((a: any) => a.id === areaId ? { ...a, geometry } : a));
+          }}
+          onAreaDelete={(id) => setAreas((prev: any[]) => prev.filter((a: any) => a.id !== id))}
         />
         
         {/* Selected Area Panel overlay */}
@@ -251,20 +253,34 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                         <p className="text-sm text-slate-700">{selectedArea.description || "No description provided."}</p>
                       </div>
                       
-                      <div className="flex gap-2 pt-4 border-t border-slate-100">
+                      <div className="flex flex-col gap-2 pt-4 border-t border-slate-100">
+                        <div className="flex gap-2">
+                          <Button 
+                            className="flex-1 text-xs" 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setAreaFormData(selectedArea);
+                              setIsAreaModalOpen(true);
+                            }}
+                          >
+                            Edit Details
+                          </Button>
+                          <Button 
+                            className="flex-1 text-xs" 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if ((window as any).__mapEditVertices) {
+                                (window as any).__mapEditVertices(selectedArea.id);
+                              }
+                            }}
+                          >
+                            Edit Anchors
+                          </Button>
+                        </div>
                         <Button 
-                          className="flex-1 text-xs" 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setAreaFormData(selectedArea);
-                            setIsAreaModalOpen(true);
-                          }}
-                        >
-                          Edit Details
-                        </Button>
-                        <Button 
-                          className="flex-1 text-xs" 
+                          className="w-full text-xs" 
                           variant="default" 
                           size="sm"
                           onClick={() => window.open(`/dashboard/projects/${project.id}/areas/${selectedArea.id}/print`, '_blank')}
