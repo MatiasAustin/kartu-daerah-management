@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { MapContainer } from "@/components/map/MapContainer";
+import { PublicWorkspace } from "@/components/public/PublicWorkspace";
 
 export default async function PublicViewPage({
   params,
@@ -62,32 +62,12 @@ export default async function PublicViewPage({
 
       {/* Main Content Area */}
       <div className="flex-1 relative flex">
-        {/* Simple Sidebar */}
-        <div className="w-72 bg-white border-r border-slate-200 flex flex-col z-10 shadow-sm">
-          <div className="p-4 border-b border-slate-100 bg-slate-50">
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-2">Areas</h2>
-            <p className="text-xs text-slate-500">Click an area on the map or select from the list below to view details.</p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {areas?.map((area) => (
-              <div key={area.id} className="p-2 hover:bg-slate-50 rounded-md cursor-pointer border border-transparent transition-colors">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: (area.groups as any)?.color || "#ccc" }} />
-                  <span className="font-medium text-sm text-slate-700">{area.area_number}</span>
-                  <span className="text-sm text-slate-600 truncate">{area.name}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Map */}
-        <div className="flex-1 relative">
-           {/* Note: We reuse MapContainer, but we probably want to disable drawing for public views. 
-               We'd need to pass a readOnly flag to MapContainer in a real app, but for now, 
-               just not passing onAreaCreate effectively ignores draw events. */}
-          <MapContainer areas={areas || []} />
-        </div>
+        <PublicWorkspace 
+          project={share.projects} 
+          groups={groups || []} 
+          areas={areas || []} 
+          isGroupShare={!!share.group_id} 
+        />
       </div>
     </div>
   );
