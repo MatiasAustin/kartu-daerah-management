@@ -91,7 +91,6 @@ interface PrintAreaCardProps {
 export function PrintAreaCard({ project, group, area, isPublicView = false }: PrintAreaCardProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
 
   // Generate Google Maps URL using center lat/lng
   const googleMapsUrl = area.center_lat && area.center_lng 
@@ -106,7 +105,9 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       ? [area.center_lng, area.center_lat] 
       : [106.8272, -6.1751];
 
-    const rasterStyle = {
+    const geo = resolveGeometry(area);
+
+    const printStyle = {
       version: 8,
       sources: {
         carto: {
@@ -118,6 +119,17 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
           ],
           tileSize: 256,
           attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+        },
+        "print-area-source": {
+          type: "geojson",
+          data: geo ? {
+            type: "FeatureCollection",
+            features: [{
+              type: "Feature",
+              geometry: geo,
+              properties: {}
+            }]
+          } : { type: "FeatureCollection", features: [] }
         }
       },
       layers: [
@@ -127,13 +139,31 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
           source: "carto",
           minzoom: 0,
           maxzoom: 22
+        },
+        {
+          id: "print-area-fill",
+          type: "fill",
+          source: "print-area-source",
+          paint: {
+            "fill-color": group?.color || "#ef4444",
+            "fill-opacity": 0.4
+          }
+        },
+        {
+          id: "print-area-outline",
+          type: "line",
+          source: "print-area-source",
+          paint: {
+            "line-color": group?.color || "#ef4444",
+            "line-width": 3
+          }
         }
       ]
     };
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: rasterStyle as any,
+      style: printStyle as any,
       center: center as [number, number],
       zoom: 14,
       interactive: false,
@@ -141,61 +171,8 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
     } as any);
 
     map.current.on("load", () => {
-      setMapLoaded(true);
-    });
-
-    return () => {
-      map.current?.remove();
-      map.current = null;
-    };
-  }, [area.center_lng, area.center_lat]);
-
-  // Second effect to handle source, layers, and fitting bounds once map is loaded
-  useEffect(() => {
-    const geo = resolveGeometry(area);
-    if (!mapLoaded || !map.current || !geo) return;
-    const m = map.current;
-    const sourceId = "print-area-source";
-
-    if (!m.getSource(sourceId)) {
-      m.addSource(sourceId, {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] }
-      });
-
-      m.addLayer({
-        id: "print-area-fill",
-        type: "fill",
-        source: sourceId,
-        paint: {
-          "fill-color": group.color || "#ef4444",
-          "fill-opacity": 0.4
-        },
-      });
-
-      m.addLayer({
-        id: "print-area-outline",
-        type: "line",
-        source: sourceId,
-        paint: {
-          "line-color": group.color || "#ef4444",
-          "line-width": 3
-        }
-      });
-    }
-
-    // Now set the data
-    const source = m.getSource(sourceId) as maplibregl.GeoJSONSource;
-    if (source) {
-      source.setData({
-        type: "FeatureCollection",
-        features: [{
-          type: "Feature",
-          geometry: geo,
-          properties: {}
-        }]
-      } as any);
-    }
+      const m = map.current;
+      if (!m || !geo) return;
 
       // Calculate Bounding Box to fit map automatically
       let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
@@ -211,10 +188,8 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
         }
       };
 
-      if (geo && geo.coordinates) {
+      if (geo.coordinates) {
         extractCoords(geo.coordinates);
-        
-        // Fit map bounds if valid bbox was found
         if (minLng < maxLng && minLat < maxLat) {
           m.fitBounds(
             [[minLng, minLat], [maxLng, maxLat]], 
@@ -222,10 +197,13 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
           );
         }
       }
-      
-      // Force repaint since interactive is false
-      m.triggerRepaint();
-  }, [mapLoaded, area, group]);
+    });
+
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, [area, group]);
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 px-4 flex flex-col items-center justify-center print:bg-white print:p-0">
