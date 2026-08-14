@@ -41,10 +41,11 @@ export function ProjectCardActions({ project }: { project: any }) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
+        <DropdownMenuTrigger 
+          onClick={(e) => e.stopPropagation()} 
+          className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors focus:outline-none"
+        >
+          <MoreVertical className="h-4 w-4 text-slate-500" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem onClick={() => setShowEditModal(true)}>
