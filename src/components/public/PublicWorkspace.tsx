@@ -143,7 +143,7 @@ export function PublicWorkspace({ project, groups, areas, isGroupShare }: Public
       </div>
 
       {/* Map Panel - top on mobile, right on desktop */}
-      <div className="order-1 md:order-2 flex-1 relative bg-slate-100 min-h-[50vh] md:min-h-0">
+      <div className="order-1 md:order-2 flex-1 relative bg-slate-100 min-h-0">
         <MapContainer areas={areas} readOnly={true} />
       </div>
     </div>
