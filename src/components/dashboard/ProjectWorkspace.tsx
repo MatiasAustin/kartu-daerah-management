@@ -301,7 +301,19 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
       <GroupModal 
         isOpen={isGroupModalOpen} 
         onClose={() => setIsGroupModalOpen(false)} 
-        projectId={project.id} 
+        projectId={project.id}
+        onSuccess={async () => {
+          // Refresh groups list so new/updated groups appear in sidebar immediately
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("groups")
+            .select("*")
+            .eq("project_id", project.id)
+            .order("sort_order");
+          if (data) setGroups(data);
+          setIsGroupModalOpen(false);
+        }}
       />
       
       <AreaModal

@@ -9,17 +9,20 @@ export async function createGroup(projectId: string, data: any) {
 
   if (!user) return { error: "Not authenticated" };
 
-  const { error } = await supabase.from("groups").insert({
+  const { data: created, error } = await supabase.from("groups").insert({
     project_id: projectId,
     name: data.name,
     description: data.description,
     color: data.color || "#ef4444",
-  });
+  }).select().single();
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[createGroup] Supabase error:", error);
+    return { error: error.message };
+  }
 
   revalidatePath(`/dashboard/projects/${projectId}`);
-  return { success: true };
+  return { success: true, group: created };
 }
 
 export async function updateGroup(groupId: string, projectId: string, data: any) {
