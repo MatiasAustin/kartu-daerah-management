@@ -6,6 +6,11 @@ import type * as MapLibreTypes from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useMapStore } from "@/lib/store/mapStore";
 
+if (typeof window !== "undefined") {
+  // Bypass Next.js dynamic route HTML resolution for relative worker chunks
+  maplibregl.setWorkerUrl("https://unpkg.com/maplibre-gl@6.3.0/dist/maplibre-gl-worker.mjs");
+}
+
 type ToolMode = "select" | "pen";
 
 // ─── EWKB decoder ────────────────────────────────────────────────────────────
