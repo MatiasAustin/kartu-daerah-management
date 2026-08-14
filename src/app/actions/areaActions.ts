@@ -3,7 +3,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function createArea(projectId: string, groupId: string, data: any) {
+export async function createArea(
+  projectId: string,
+  groupId: string,
+  data: any
+): Promise<{ error: string } | { success: true; area: Record<string, any> | null }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
