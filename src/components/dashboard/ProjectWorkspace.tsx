@@ -374,7 +374,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                             size="sm"
                             onClick={() => window.open(`/dashboard/projects/${project.id}/areas/${selectedArea.id}/print`, '_blank')}
                           >
-                            Print Card
+                            Share/Print
                           </Button>
                           <Button
                             className="flex-1 text-xs"

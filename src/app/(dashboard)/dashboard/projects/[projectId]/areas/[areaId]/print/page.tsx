@@ -30,7 +30,7 @@ export default async function PrintAreaPage({
 
   // Fetch Group
   const { data: group } = await supabase
-    .from("area_groups")
+    .from("groups")
     .select("*")
     .eq("id", area.group_id)
     .single();
@@ -46,21 +46,5 @@ export default async function PrintAreaPage({
     return notFound();
   }
 
-  return (
-    <div className="min-h-screen bg-slate-200 py-8 print:py-0 print:bg-white flex justify-center">
-      <div className="w-full max-w-4xl bg-white shadow-2xl print:shadow-none overflow-hidden rounded-xl print:rounded-none">
-        
-        {/* Print instructions overlay (hidden during print) */}
-        <div className="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center print:hidden rounded-t-xl">
-          <div>
-            <h2 className="font-bold">Print Preview Mode</h2>
-            <p className="text-sm text-indigo-200">Adjust your browser print settings to A4/Letter size. Enable "Background graphics" if colors are missing.</p>
-          </div>
-          <PrintButton />
-        </div>
-
-        <PrintAreaCard project={project} group={group} area={area} />
-      </div>
-    </div>
-  );
+  return <PrintAreaCard project={project} group={group} area={area} />;
 }
