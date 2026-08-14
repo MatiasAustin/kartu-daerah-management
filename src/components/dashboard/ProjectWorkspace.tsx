@@ -253,7 +253,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                       
                       <div className="flex gap-2 pt-4 border-t border-slate-100">
                         <Button 
-                          className="w-full text-xs" 
+                          className="flex-1 text-xs" 
                           variant="outline" 
                           size="sm"
                           onClick={() => {
@@ -262,6 +262,14 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
                           }}
                         >
                           Edit Details
+                        </Button>
+                        <Button 
+                          className="flex-1 text-xs" 
+                          variant="default" 
+                          size="sm"
+                          onClick={() => window.open(`/dashboard/projects/${project.id}/areas/${selectedArea.id}/print`, '_blank')}
+                        >
+                          Print Card
                         </Button>
                       </div>
                     </div>
