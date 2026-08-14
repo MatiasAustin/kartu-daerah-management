@@ -28,72 +28,88 @@ function ewkbHexToGeoJSON(hex: string): any | null {
     const view = new DataView(bytes.buffer);
     let offset = 0;
 
-    const byteOrder = view.getUint8(offset++);
-    const le = byteOrder === 1; // 1 = little-endian
+    const readGeometry = (): any | null => {
+      if (offset >= bytes.length) return null;
+      
+      const byteOrder = view.getUint8(offset++);
+      const le = byteOrder === 1; // 1 = little-endian
 
-    const readUint32 = () => { const v = view.getUint32(offset, le); offset += 4; return v; };
-    const readFloat64 = () => { const v = view.getFloat64(offset, le); offset += 8; return v; };
+      const readUint32 = () => { const v = view.getUint32(offset, le); offset += 4; return v; };
+      const readFloat64 = () => { const v = view.getFloat64(offset, le); offset += 8; return v; };
 
-    let wkbType = readUint32();
+      let wkbType = readUint32();
 
-    // EWKB flags
-    const hasZ = (wkbType & 0x80000000) !== 0;
-    const hasM = (wkbType & 0x40000000) !== 0;
-    const hasSRID = (wkbType & 0x20000000) !== 0;
-    wkbType = wkbType & 0x0fffffff;
+      // EWKB flags
+      const hasZ = (wkbType & 0x80000000) !== 0;
+      const hasM = (wkbType & 0x40000000) !== 0;
+      const hasSRID = (wkbType & 0x20000000) !== 0;
+      wkbType = wkbType & 0x0fffffff;
 
-    if (hasSRID) readUint32(); // skip SRID
+      if (hasSRID) readUint32(); // skip SRID
 
-    const readPoint = (): [number, number] => {
-      const x = readFloat64();
-      const y = readFloat64();
-      if (hasZ) readFloat64();
-      if (hasM) readFloat64();
-      return [x, y];
-    };
+      const readPoint = (): [number, number] => {
+        const x = readFloat64();
+        const y = readFloat64();
+        if (hasZ) readFloat64();
+        if (hasM) readFloat64();
+        return [x, y];
+      };
 
-    const readRing = (): [number, number][] => {
-      const count = readUint32();
-      const pts: [number, number][] = [];
-      for (let i = 0; i < count; i++) pts.push(readPoint());
-      return pts;
-    };
+      const readRing = (): [number, number][] => {
+        const count = readUint32();
+        const pts: [number, number][] = [];
+        for (let i = 0; i < count; i++) pts.push(readPoint());
+        return pts;
+      };
 
-    if (wkbType === 1) {
-      // Point
-      return { type: "Point", coordinates: readPoint() };
-    } else if (wkbType === 2) {
-      // LineString
-      const count = readUint32();
-      const pts: [number, number][] = [];
-      for (let i = 0; i < count; i++) pts.push(readPoint());
-      return { type: "LineString", coordinates: pts };
-    } else if (wkbType === 3) {
-      // Polygon
-      const numRings = readUint32();
-      const rings: [number, number][][] = [];
-      for (let i = 0; i < numRings; i++) rings.push(readRing());
-      return { type: "Polygon", coordinates: rings };
-    } else if (wkbType === 6) {
-      // MultiPolygon
-      const numGeoms = readUint32();
-      const polys: [number, number][][][] = [];
-      for (let i = 0; i < numGeoms; i++) {
-        // Each geometry starts with its own byte order + type
-        offset++; // byteOrder
-        let subType = readUint32();
-        const subHasSRID = (subType & 0x20000000) !== 0;
-        if (subHasSRID) readUint32();
-        subType = subType & 0x0fffffff;
+      if (wkbType === 1) {
+        return { type: "Point", coordinates: readPoint() };
+      } else if (wkbType === 2) {
+        return { type: "LineString", coordinates: readRing() };
+      } else if (wkbType === 3) {
         const numRings = readUint32();
-        const rings: [number, number][][] = [];
-        for (let j = 0; j < numRings; j++) rings.push(readRing());
-        polys.push(rings);
+        const rings = [];
+        for (let i = 0; i < numRings; i++) rings.push(readRing());
+        return { type: "Polygon", coordinates: rings };
+      } else if (wkbType === 4) {
+        const numGeoms = readUint32();
+        const pts = [];
+        for (let i = 0; i < numGeoms; i++) {
+          const geom = readGeometry();
+          if (geom && geom.type === "Point") pts.push(geom.coordinates);
+        }
+        return { type: "MultiPoint", coordinates: pts };
+      } else if (wkbType === 5) {
+        const numGeoms = readUint32();
+        const lines = [];
+        for (let i = 0; i < numGeoms; i++) {
+          const geom = readGeometry();
+          if (geom && geom.type === "LineString") lines.push(geom.coordinates);
+        }
+        return { type: "MultiLineString", coordinates: lines };
+      } else if (wkbType === 6) {
+        const numGeoms = readUint32();
+        const polys = [];
+        for (let i = 0; i < numGeoms; i++) {
+          const geom = readGeometry();
+          if (geom && geom.type === "Polygon") polys.push(geom.coordinates);
+        }
+        return { type: "MultiPolygon", coordinates: polys };
+      } else if (wkbType === 7) {
+        const numGeoms = readUint32();
+        const geometries = [];
+        for (let i = 0; i < numGeoms; i++) {
+          const geom = readGeometry();
+          if (geom) geometries.push(geom);
+        }
+        return { type: "GeometryCollection", geometries };
       }
-      return { type: "MultiPolygon", coordinates: polys };
-    }
-    return null;
-  } catch {
+      return null;
+    };
+
+    return readGeometry();
+  } catch (e) {
+    console.error("EWKB decode error:", e);
     return null;
   }
 }
@@ -580,12 +596,23 @@ export function MapContainer({
           color: a.groups?.color || a.group_color || "#ef4444",
         };
 
-        validFeatures.push({
-          type: "Feature",
-          id: a.id,
-          geometry: geo,
-          properties: safeProps,
-        });
+        if (geo.type === "GeometryCollection" && geo.geometries) {
+          geo.geometries.forEach((g: any, i: number) => {
+            validFeatures.push({
+              type: "Feature",
+              id: `${a.id}-${i}`,
+              geometry: g,
+              properties: safeProps,
+            });
+          });
+        } else {
+          validFeatures.push({
+            type: "Feature",
+            id: a.id,
+            geometry: geo,
+            properties: safeProps,
+          });
+        }
       }
     }
     console.log("[MapDebug] validFeatures:", validFeatures.length, validFeatures[0]);

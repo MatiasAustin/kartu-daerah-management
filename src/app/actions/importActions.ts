@@ -37,20 +37,32 @@ export async function importKMLData(projectId: string, parsedGroups: { name: str
       let groupLocationName = "Imported Group";
       for (const feature of group.features) {
         let lng = null, lat = null;
-        if (feature.geometry?.type === "Polygon") {
-          const coords = feature.geometry.coordinates[0];
-          if (coords && coords.length > 0) {
-            let minX = 180, maxX = -180, minY = 90, maxY = -90;
-            coords.forEach((coord: number[]) => {
-              if (coord[0] < minX) minX = coord[0];
-              if (coord[0] > maxX) maxX = coord[0];
-              if (coord[1] < minY) minY = coord[1];
-              if (coord[1] > maxY) maxY = coord[1];
-            });
-            lng = (minX + maxX) / 2; lat = (minY + maxY) / 2;
+        if (feature.geometry) {
+          let minX = 180, maxX = -180, minY = 90, maxY = -90;
+          let hasCoords = false;
+
+          const extract = (coords: any[]) => {
+            if (typeof coords[0] === 'number') {
+              hasCoords = true;
+              if (coords[0] < minX) minX = coords[0];
+              if (coords[0] > maxX) maxX = coords[0];
+              if (coords[1] < minY) minY = coords[1];
+              if (coords[1] > maxY) maxY = coords[1];
+            } else if (Array.isArray(coords)) {
+              coords.forEach(extract);
+            }
+          };
+
+          if (feature.geometry.type === "GeometryCollection") {
+            feature.geometry.geometries?.forEach((g: any) => extract(g.coordinates || []));
+          } else {
+            extract(feature.geometry.coordinates || []);
           }
-        } else if (feature.geometry?.type === "Point") {
-          lng = feature.geometry.coordinates[0]; lat = feature.geometry.coordinates[1];
+
+          if (hasCoords) {
+            lng = (minX + maxX) / 2;
+            lat = (minY + maxY) / 2;
+          }
         }
 
         if (lng && lat) {
@@ -105,23 +117,32 @@ export async function importKMLData(projectId: string, parsedGroups: { name: str
         let center_lng = null;
         let center_lat = null;
 
-        if (feature.geometry?.type === "Polygon") {
-          const coords = feature.geometry.coordinates[0];
-          if (coords && coords.length > 0) {
-            // simple bounding box center
-            let minX = 180, maxX = -180, minY = 90, maxY = -90;
-            coords.forEach((coord: number[]) => {
-              if (coord[0] < minX) minX = coord[0];
-              if (coord[0] > maxX) maxX = coord[0];
-              if (coord[1] < minY) minY = coord[1];
-              if (coord[1] > maxY) maxY = coord[1];
-            });
+        if (feature.geometry) {
+          let minX = 180, maxX = -180, minY = 90, maxY = -90;
+          let hasCoords = false;
+
+          const extract = (coords: any[]) => {
+            if (typeof coords[0] === 'number') {
+              hasCoords = true;
+              if (coords[0] < minX) minX = coords[0];
+              if (coords[0] > maxX) maxX = coords[0];
+              if (coords[1] < minY) minY = coords[1];
+              if (coords[1] > maxY) maxY = coords[1];
+            } else if (Array.isArray(coords)) {
+              coords.forEach(extract);
+            }
+          };
+
+          if (feature.geometry.type === "GeometryCollection") {
+            feature.geometry.geometries?.forEach((g: any) => extract(g.coordinates || []));
+          } else {
+            extract(feature.geometry.coordinates || []);
+          }
+
+          if (hasCoords) {
             center_lng = (minX + maxX) / 2;
             center_lat = (minY + maxY) / 2;
           }
-        } else if (feature.geometry?.type === "Point") {
-          center_lng = feature.geometry.coordinates[0];
-          center_lat = feature.geometry.coordinates[1];
         }
 
         const { error: areaError } = await supabase.from("areas").insert({
