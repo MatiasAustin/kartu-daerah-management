@@ -715,7 +715,7 @@ export function MapContainer({
 
       {/* ── Floating Toolbar ── */}
       {!readOnly && (
-        <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5">
+        <div className="absolute top-20 md:top-4 left-4 z-10 flex flex-col gap-1.5">
           {/* Select */}
           <button
             title="Select Tool"

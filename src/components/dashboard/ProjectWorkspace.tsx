@@ -181,7 +181,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
       <div className="p-4 border-b border-slate-200 bg-slate-50 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900 truncate pr-2">{project.name}</h2>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 pr-8 md:pr-0">
             <ImportKmlButton projectId={project.id} onSuccess={() => {
               // Refresh both areas and groups from DB after successful import
               window.location.reload(); 
