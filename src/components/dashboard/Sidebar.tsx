@@ -60,8 +60,9 @@ export function Sidebar() {
 
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-white">
-      <div className="flex h-16 items-center px-6">
+      <div className="flex h-16 flex-col justify-center px-6 border-b border-slate-800">
         <h1 className="text-xl font-bold tracking-tight">GeoManager</h1>
+        <p className="text-[10px] text-slate-400 font-mono tracking-wider">Dev by Sidang Cikampek</p>
       </div>
       
       <NavLinks pathname={pathname} />
@@ -96,8 +97,9 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent side="left" className="w-64 bg-slate-900 text-white border-r-slate-800 p-0 flex flex-col">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <div className="flex h-16 items-center px-6 border-b border-slate-800">
+        <div className="flex h-16 flex-col justify-center px-6 border-b border-slate-800">
           <h1 className="text-xl font-bold tracking-tight">GeoManager</h1>
+          <p className="text-[10px] text-slate-400 font-mono tracking-wider">Dev by Sidang Cikampek</p>
         </div>
         
         <NavLinks pathname={pathname} />
