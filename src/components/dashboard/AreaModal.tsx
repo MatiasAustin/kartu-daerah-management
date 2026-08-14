@@ -77,6 +77,7 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
         area_number: areaNumber,
         name,
         description,
+        group_id: groupId,
       });
     } else {
       // Calculate centroid (average of polygon vertices)
@@ -117,6 +118,7 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
               area_number: areaNumber,
               name,
               description,
+              group_id: groupId,
             },
           });
         } else {
@@ -155,11 +157,10 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
             </div>
           )}
 
-          {/* Group selector (only for new areas) */}
-          {!isEditing && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="groupId">Assign to Group <span className="text-red-500">*</span></Label>
+          {/* Group selector */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="groupId">Group (Daerah) <span className="text-red-500">*</span></Label>
                 <button
                   type="button"
                   onClick={() => setIsGroupModalOpen(true)}
@@ -190,7 +191,6 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
                 </select>
               )}
             </div>
-          )}
 
           {/* Area number + name (Only visible when editing, auto-generated on create) */}
           {isEditing ? (

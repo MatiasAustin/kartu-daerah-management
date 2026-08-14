@@ -109,6 +109,7 @@ export async function updateArea(areaId: string, projectId: string, data: any) {
   if (data.geometry) updatePayload.geometry = data.geometry;
   if (data.center_lng) updatePayload.center_lng = data.center_lng;
   if (data.center_lat) updatePayload.center_lat = data.center_lat;
+  if (data.group_id) updatePayload.group_id = data.group_id;
 
   const { error } = await supabase
     .from("areas")
