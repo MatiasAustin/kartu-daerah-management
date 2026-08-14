@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen flex-col md:flex-row overflow-hidden bg-slate-50 print:bg-white print:overflow-visible print:h-auto">
+    <div className="flex h-[100dvh] flex-col md:flex-row overflow-hidden bg-slate-50 print:bg-white print:overflow-visible print:h-auto">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex h-full print:hidden">
         <Sidebar />

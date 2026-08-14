@@ -46,7 +46,7 @@ export default async function PublicViewPage({
   const projectName = (share.projects as any)?.name || "Project Map";
 
   return (
-    <div className="flex flex-col h-screen w-full bg-white">
+    <div className="flex flex-col h-[100dvh] w-full bg-white">
       {/* Public Header */}
       <header className="h-14 border-b border-slate-200 bg-white flex items-center px-6 justify-between shrink-0 z-10">
         <div className="flex items-center gap-2">
