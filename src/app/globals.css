@@ -135,14 +135,18 @@
 }
 
 .maplibregl-ctrl-group:has(.maplibregl-ctrl-geolocate) {
-  margin-top: 24px !important;
-  margin-right: 14px !important;
+  margin-top: 14px !important;
+}
+
+.custom-map-btn-group {
+  margin-top: 14px !important;
 }
 
 /* MapLibre Geolocate Customization */
-.maplibregl-ctrl-geolocate {
+.maplibregl-ctrl-geolocate,
+.custom-map-btn {
   transform: scale(1.35) !important;
-  transform-origin: center center !important;
+  transform-origin: center right !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   border-radius: 6px !important;
   background-color: white !important;
