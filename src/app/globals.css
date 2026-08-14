@@ -134,11 +134,15 @@
   overflow: visible !important;
 }
 
+.maplibregl-ctrl-group:has(.maplibregl-ctrl-geolocate) {
+  margin-top: 24px !important;
+  margin-right: 14px !important;
+}
+
 /* MapLibre Geolocate Customization */
 .maplibregl-ctrl-geolocate {
-  transform: scale(1.15) !important;
-  transform-origin: center right !important;
-  margin-top: 8px !important;
+  transform: scale(1.35) !important;
+  transform-origin: center center !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   border-radius: 6px !important;
   background-color: white !important;
