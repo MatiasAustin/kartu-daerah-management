@@ -12,9 +12,10 @@ interface GroupModalProps {
   onClose: () => void;
   projectId: string;
   initialData?: any;
+  onSuccess?: () => void;
 }
 
-export function GroupModal({ isOpen, onClose, projectId, initialData }: GroupModalProps) {
+export function GroupModal({ isOpen, onClose, projectId, initialData, onSuccess }: GroupModalProps) {
   const [name, setName] = useState(initialData?.name || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [color, setColor] = useState(initialData?.color || "#ef4444");
@@ -40,7 +41,7 @@ export function GroupModal({ isOpen, onClose, projectId, initialData }: GroupMod
     if (res?.error) {
       setError(res.error);
     } else {
-      onClose();
+      onSuccess ? onSuccess() : onClose();
     }
   };
 

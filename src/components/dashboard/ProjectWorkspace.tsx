@@ -313,6 +313,13 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
         projectId={project.id}
         groups={groups}
         initialData={areaFormData}
+        onGroupCreated={async () => {
+          // Refresh groups list after inline group creation
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          const { data } = await supabase.from("groups").select("*").eq("project_id", project.id).order("sort_order");
+          if (data) setGroups(data);
+        }}
       />
 
       {selectedGroupForManager && (

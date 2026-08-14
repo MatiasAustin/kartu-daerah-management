@@ -6,18 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createArea, updateArea } from "@/app/actions/areaActions";
+import { GroupModal } from "./GroupModal";
 
 interface AreaModalProps {
   isOpen: boolean;
   onClose: () => void;
   projectId: string;
   groups: any[];
+  onGroupCreated?: () => void;
   initialData?: any; 
   // initialData could be raw drawn GeoJSON feature (needs saving) 
   // OR an existing area from DB (needs updating)
 }
 
-export function AreaModal({ isOpen, onClose, projectId, groups, initialData }: AreaModalProps) {
+export function AreaModal({ isOpen, onClose, projectId, groups, onGroupCreated, initialData }: AreaModalProps) {
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   // If initialData has an 'id' and 'group_id', it's an existing DB record.
   // If it just has geometry properties (like from MapboxDraw), it's a new unsaved area.
   const isEditing = !!initialData?.group_id;
@@ -82,7 +85,7 @@ export function AreaModal({ isOpen, onClose, projectId, groups, initialData }: A
     }
   };
 
-  return (
+  return (<>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
@@ -93,19 +96,37 @@ export function AreaModal({ isOpen, onClose, projectId, groups, initialData }: A
           
           {!isEditing && (
             <div className="space-y-2">
-              <Label htmlFor="groupId">Assign to Group</Label>
-              <select 
-                id="groupId" 
-                value={groupId} 
-                onChange={(e) => setGroupId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                required
-              >
-                <option value="" disabled>Select a group...</option>
-                {groups.map(g => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="groupId">Assign to Group</Label>
+                <button
+                  type="button"
+                  onClick={() => setIsGroupModalOpen(true)}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                >
+                  + New Group
+                </button>
+              </div>
+              {groups.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 p-4 text-center">
+                  <p className="text-sm text-slate-500 mb-2">No groups yet. Create one first.</p>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setIsGroupModalOpen(true)}>
+                    Create a Group
+                  </Button>
+                </div>
+              ) : (
+                <select 
+                  id="groupId" 
+                  value={groupId} 
+                  onChange={(e) => setGroupId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                  required
+                >
+                  <option value="" disabled>Select a group...</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 
@@ -132,5 +153,15 @@ export function AreaModal({ isOpen, onClose, projectId, groups, initialData }: A
         </form>
       </DialogContent>
     </Dialog>
-  );
+
+    <GroupModal
+      isOpen={isGroupModalOpen}
+      onClose={() => setIsGroupModalOpen(false)}
+      projectId={projectId}
+      onSuccess={() => {
+        setIsGroupModalOpen(false);
+        onGroupCreated?.();
+      }}
+    />
+  </>);
 }

@@ -157,15 +157,16 @@ export function MapContainer({
     });
 
     map.current.addControl(new maplibregl.NavigationControl(), "top-right");
-    map.current.addControl(
-      new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true } as any),
-      "top-right"
-    );
+    const geolocate = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true } as any);
+    map.current.addControl(geolocate, "top-right");
 
     map.current.on("load", () => {
       const m = map.current!;
       setMapLoaded(true);
       setMap(m);
+
+      // Auto-trigger geolocation immediately on load
+      setTimeout(() => { try { geolocate.trigger(); } catch {} }, 1000);
 
       // ── Areas source + layers ──────────────────────────────────────────
       m.addSource("areas-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -178,9 +179,13 @@ export function MapContainer({
       });
 
       // ── Pen preview layers ─────────────────────────────────────────────
+      // Line connecting placed points + mouse cursor
       m.addSource("pen-preview", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({ id: "pen-fill", type: "fill", source: "pen-preview", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#6366f1", "fill-opacity": 0.15 } });
-      m.addLayer({ id: "pen-line", type: "line", source: "pen-preview", paint: { "line-color": "#6366f1", "line-width": 2, "line-dasharray": [5, 3] } });
+      // Make line thick, solid, and always visible
+      m.addLayer({ id: "pen-line", type: "line", source: "pen-preview", paint: { "line-color": "#6366f1", "line-width": 2.5, "line-opacity": 1 } });
+      // White outline under line for contrast on any basemap
+      m.addLayer({ id: "pen-line-outline", type: "line", source: "pen-preview", paint: { "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.5 }, layout: {} }, "pen-line");
 
       // Anchor dots
       m.addSource("pen-dots", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
