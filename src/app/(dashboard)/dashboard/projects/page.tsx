@@ -5,6 +5,8 @@ import { FolderKanban, Plus, Globe } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { NewProjectButton } from "@/components/dashboard/NewProjectButton";
+
 export default async function ProjectsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -59,10 +61,7 @@ export default async function ProjectsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Projects</h1>
           <p className="text-slate-500">Manage your geographic projects and maps.</p>
         </div>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Project
-        </Button>
+        <NewProjectButton />
       </div>
 
       {projects.length === 0 ? (
@@ -74,7 +73,7 @@ export default async function ProjectsPage() {
           <p className="text-slate-500 max-w-sm text-center mb-4">
             Get started by creating a project to organize your areas and groups.
           </p>
-          <Button>Create your first project</Button>
+          <NewProjectButton variant="empty_state" />
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
