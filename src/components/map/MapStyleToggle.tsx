@@ -54,10 +54,12 @@ export function MapStyleToggle() {
         toggleMapStyle();
         setShowTooltip(false);
       }}
-      className="custom-map-btn p-1.5 hover:bg-slate-50 transition-colors flex items-center justify-center relative w-[29px] h-[29px] bg-white rounded-[6px]"
+      className="custom-map-btn hover:bg-slate-50 transition-colors relative w-[29px] h-[29px] bg-white rounded-[6px]"
       title="Change Map Style"
     >
-      <Layers className={`w-[16px] h-[16px] ${mapStyle === "detailed" ? "text-indigo-600" : "text-slate-700"}`} strokeWidth={2.5} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
+        <Layers className={`w-[16px] h-[16px] ${mapStyle === "detailed" ? "text-indigo-600" : "text-slate-700"}`} strokeWidth={2.5} />
+      </div>
       
       {/* Animated Pop-up Tooltip */}
       {showTooltip && (
