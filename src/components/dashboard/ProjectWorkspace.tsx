@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MapContainer } from "@/components/map/MapContainer";
 import { useMapStore } from "@/lib/store/mapStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +22,14 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
   const [searchQuery, setSearchQuery] = useState("");
   
   const { selectedAreaId, setSelectedAreaId, flyToArea } = useMapStore();
+
+  useEffect(() => {
+    setAreas(initialAreas);
+  }, [initialAreas]);
+
+  useEffect(() => {
+    setGroups(initialGroups);
+  }, [initialGroups]);
 
   // Modal States
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);

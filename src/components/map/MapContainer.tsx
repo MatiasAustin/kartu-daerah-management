@@ -431,19 +431,24 @@ export function MapContainer({
   // ── Sync areas GeoJSON ────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
-    (map.current.getSource("areas-source") as maplibregl.GeoJSONSource)?.setData({
-      type: "FeatureCollection",
-      features: areas.filter(a => a.geometry || a.geojson).map(a => {
+      const validFeatures = [];
+      for (const a of areas) {
         let geo = a.geojson || a.geometry;
         if (typeof geo === 'string' && geo.startsWith('{')) {
           try { geo = JSON.parse(geo); } catch (e) {}
         }
-        return {
-          type: "Feature", id: a.id, geometry: geo,
-          properties: { ...a, color: a.groups?.color || "#ef4444" },
-        };
-      }),
-    } as any);
+        if (geo && typeof geo === 'object' && geo.type) {
+          validFeatures.push({
+            type: "Feature", id: a.id, geometry: geo,
+            properties: { ...a, color: a.groups?.color || "#ef4444" },
+          });
+        }
+      }
+      
+      (map.current.getSource("areas-source") as maplibregl.GeoJSONSource)?.setData({
+        type: "FeatureCollection",
+        features: validFeatures,
+      } as any);
   }, [areas, mapLoaded]);
 
   // ── Sync fill/line style live ─────────────────────────────────────────────
