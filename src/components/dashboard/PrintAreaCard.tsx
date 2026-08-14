@@ -217,16 +217,16 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
     <div className="min-h-screen bg-slate-100 py-4 sm:py-8 flex flex-col items-center justify-start overflow-x-hidden print:bg-white print:p-0 print:block">
       
       {/* Action Bar (Responsive flow on screen, Hidden on print) */}
-      <div className="w-full max-w-[148mm] px-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 print:hidden z-50">
-        <div className="bg-white/90 p-4 rounded-lg shadow-lg border border-slate-200 max-w-xs text-sm mb-4">
-          <h4 className="font-bold text-slate-800 mb-2">Printing Tips</h4>
+      <div className="w-full max-w-[148mm] px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 print:hidden z-50">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full sm:max-w-[200px] text-sm">
+          <h4 className="font-bold text-slate-800 mb-1.5">Printing Tips</h4>
           <ul className="text-slate-600 space-y-1 text-xs list-disc pl-4">
             <li>Set Paper Size to <strong>A5</strong></li>
             <li>Set Margins to <strong>None</strong></li>
-            <li>Check <strong>Background graphics</strong> to print map styling</li>
+            <li>Check <strong>Background graphics</strong></li>
           </ul>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">
           <button
             onClick={() => {
               const url = `${window.location.origin}/view/area/${area.id}`;
@@ -262,7 +262,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
         
         {/* A5 physical size is 148mm x 210mm */}
         <div 
-          className="bg-white text-black flex flex-col relative shadow-2xl print:shadow-none overflow-hidden border border-slate-200 print:border-none"
+          className="bg-white text-black flex flex-col relative shadow-2xl print:shadow-none overflow-hidden border border-slate-200 print:border-none shrink-0"
           style={{
             width: "148mm",
             height: "210mm",

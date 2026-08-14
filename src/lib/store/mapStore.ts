@@ -12,7 +12,7 @@ interface MapState {
   setHoveredAreaId: (id: string | null) => void;
   setDrawMode: (mode: "simple_select" | "draw_polygon") => void;
   flyToArea: (lng: number, lat: number, zoom?: number) => void;
-  fitBounds: (bounds: [[number, number], [number, number]]) => void;
+  fitBounds: (bounds: [[number, number], [number, number]], customPadding?: any) => void;
 }
 
 export const useMapStore = create<MapState>((set, get) => ({
@@ -37,10 +37,15 @@ export const useMapStore = create<MapState>((set, get) => ({
     }
   },
   
-  fitBounds: (bounds) => {
+  fitBounds: (bounds, customPadding) => {
     const { map } = get();
     if (map) {
-      map.fitBounds(bounds, { padding: 50, duration: 1000 });
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const defaultPadding = isMobile 
+        ? { top: 50, bottom: window.innerHeight * 0.45, left: 50, right: 50 } 
+        : { top: 50, bottom: 50, left: 50, right: 50 };
+      
+      map.fitBounds(bounds, { padding: customPadding || defaultPadding, duration: 1000 });
     }
   },
 }));

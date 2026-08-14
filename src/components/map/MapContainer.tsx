@@ -116,7 +116,7 @@ function ewkbHexToGeoJSON(hex: string): any | null {
 
 // Resolve geometry from an area object — handles GeoJSON objects, JSON strings,
 // and raw EWKB hex strings returned by PostgREST for PostGIS geometry columns.
-function resolveGeometry(area: any): any | null {
+export function resolveGeometry(area: any): any | null {
   // 1. Try dedicated geojson field first
   let geo = area.geojson ?? area.geometry;
   if (!geo) return null;

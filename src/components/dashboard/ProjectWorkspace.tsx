@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapContainer } from "@/components/map/MapContainer";
+import { MapContainer, resolveGeometry } from "@/components/map/MapContainer";
 import { useMapStore } from "@/lib/store/mapStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -66,8 +66,42 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
   const handleAreaClick = (area: any) => {
     setSelectedAreaId(area.id);
     setIsMobileListOpen(false);
+
+    const geo = resolveGeometry(area);
+    if (geo) {
+      let minX = 180, maxX = -180, minY = 90, maxY = -90;
+      let hasValidCoords = false;
+      const extract = (coords: any[]) => {
+        if (typeof coords[0] === 'number') {
+          hasValidCoords = true;
+          if (coords[0] < minX) minX = coords[0];
+          if (coords[0] > maxX) maxX = coords[0];
+          if (coords[1] < minY) minY = coords[1];
+          if (coords[1] > maxY) maxY = coords[1];
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extract);
+        }
+      };
+      
+      const extractFromGeometry = (geometry: any) => {
+        if (geometry.type === 'GeometryCollection') {
+          geometry.geometries.forEach(extractFromGeometry);
+        } else if (geometry.coordinates) {
+          extract(geometry.coordinates);
+        }
+      };
+      
+      extractFromGeometry(geo);
+
+      if (hasValidCoords && minX < maxX && minY < maxY) {
+        fitBounds([[minX, minY], [maxX, maxY]]);
+        return;
+      }
+    }
+
+    // Fallback if no geometry
     if (area.center_lng && area.center_lat) {
-      flyToArea(area.center_lng, area.center_lat, 15);
+      flyToArea(area.center_lng, area.center_lat, 16);
     }
   };
 
@@ -94,8 +128,16 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
         };
 
         groupAreas.forEach((a: any) => {
-          if (a.geometry?.coordinates) {
-            extract(a.geometry.coordinates);
+          const geo = resolveGeometry(a);
+          if (geo) {
+            const extractFromGeometry = (geometry: any) => {
+              if (geometry.type === 'GeometryCollection') {
+                geometry.geometries.forEach(extractFromGeometry);
+              } else if (geometry.coordinates) {
+                extract(geometry.coordinates);
+              }
+            };
+            extractFromGeometry(geo);
           }
         });
 

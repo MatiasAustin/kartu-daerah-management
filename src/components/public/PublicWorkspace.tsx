@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapContainer } from "@/components/map/MapContainer";
+import { MapContainer, resolveGeometry } from "@/components/map/MapContainer";
 import { useMapStore } from "@/lib/store/mapStore";
 import { ChevronDown, ChevronRight, MapPin, FolderOpen } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +19,39 @@ export function PublicWorkspace({ project, groups, areas, isGroupShare }: Public
 
   const handleAreaClick = (area: any) => {
     setSelectedAreaId(area.id);
+    
+    const geo = resolveGeometry(area);
+    if (geo) {
+      let minX = 180, maxX = -180, minY = 90, maxY = -90;
+      let hasValidCoords = false;
+      const extract = (coords: any[]) => {
+        if (typeof coords[0] === 'number') {
+          hasValidCoords = true;
+          if (coords[0] < minX) minX = coords[0];
+          if (coords[0] > maxX) maxX = coords[0];
+          if (coords[1] < minY) minY = coords[1];
+          if (coords[1] > maxY) maxY = coords[1];
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extract);
+        }
+      };
+      
+      const extractFromGeometry = (geometry: any) => {
+        if (geometry.type === 'GeometryCollection') {
+          geometry.geometries.forEach(extractFromGeometry);
+        } else if (geometry.coordinates) {
+          extract(geometry.coordinates);
+        }
+      };
+      
+      extractFromGeometry(geo);
+
+      if (hasValidCoords && minX < maxX && minY < maxY) {
+        useMapStore.getState().fitBounds([[minX, minY], [maxX, maxY]]);
+        return;
+      }
+    }
+
     if (area.center_lng && area.center_lat) {
       flyToArea(area.center_lng, area.center_lat, 16);
     }
@@ -48,7 +81,7 @@ export function PublicWorkspace({ project, groups, areas, isGroupShare }: Public
           <p className="text-xs text-slate-500">Pilih area dari daftar untuk melihat lokasinya di peta.</p>
         </div>
         
-        <ScrollArea className="flex-1 p-3">
+        <div className="flex-1 overflow-y-auto p-3 min-h-0">
           {isGroupShare ? (
             // Flat list for Group Share
             <div className="space-y-1">
@@ -106,7 +139,7 @@ export function PublicWorkspace({ project, groups, areas, isGroupShare }: Public
               {groups.length === 0 && <p className="text-sm text-slate-400 p-2 text-center">Tidak ada grup.</p>}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Map Panel - top on mobile, right on desktop */}
