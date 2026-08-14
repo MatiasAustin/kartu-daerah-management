@@ -540,8 +540,17 @@ export function MapContainer({
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
     const validFeatures: any[] = [];
+    console.log("[MapDebug] areas count:", areas.length);
     for (const a of areas) {
+      console.log("[MapDebug] area:", a.name, {
+        geometry_type: typeof a.geometry,
+        geometry_value: JSON.stringify(a.geometry)?.substring(0, 120),
+        geojson_type: typeof a.geojson,
+        geojson_value: JSON.stringify(a.geojson)?.substring(0, 120),
+        groups: a.groups,
+      });
       const geo = resolveGeometry(a);
+      console.log("[MapDebug] resolved geo:", geo?.type, geo ? "OK" : "FAILED");
       if (geo) {
         validFeatures.push({
           type: "Feature",
@@ -551,6 +560,7 @@ export function MapContainer({
         });
       }
     }
+    console.log("[MapDebug] validFeatures:", validFeatures.length);
 
     (map.current.getSource("areas-source") as maplibregl.GeoJSONSource)?.setData({
       type: "FeatureCollection",
