@@ -31,9 +31,34 @@ export function MapContainer({
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
+    const rasterStyle = {
+      version: 8,
+      sources: {
+        carto: {
+          type: "raster",
+          tiles: [
+            "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+            "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+            "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+          ],
+          tileSize: 256,
+          attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+        }
+      },
+      layers: [
+        {
+          id: "carto",
+          type: "raster",
+          source: "carto",
+          minzoom: 0,
+          maxzoom: 22
+        }
+      ]
+    };
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json", // Clean, minimal base map
+      style: rasterStyle as any,
       center: [106.8272, -6.1751], // Default Jakarta
       zoom: 11,
     });

@@ -28,12 +28,37 @@ export function PrintAreaCard({ project, group, area }: PrintAreaCardProps) {
       ? [area.center_lng, area.center_lat] 
       : [106.8272, -6.1751];
 
+    const rasterStyle = {
+      version: 8,
+      sources: {
+        carto: {
+          type: "raster",
+          tiles: [
+            "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+            "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+            "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+          ],
+          tileSize: 256,
+          attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+        }
+      },
+      layers: [
+        {
+          id: "carto",
+          type: "raster",
+          source: "carto",
+          minzoom: 0,
+          maxzoom: 22
+        }
+      ]
+    };
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+      style: rasterStyle as any,
       center: center as [number, number],
       zoom: 14,
-      interactive: false, // Lock map interaction for print
+      interactive: false,
     });
 
     map.current.on("load", () => {
