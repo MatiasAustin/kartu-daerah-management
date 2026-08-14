@@ -68,7 +68,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       zoom: 14,
       interactive: false,
       preserveDrawingBuffer: true,
-    });
+    } as any);
 
     map.current.on("load", () => {
       setMapLoaded(true);
