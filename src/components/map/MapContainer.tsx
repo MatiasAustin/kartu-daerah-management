@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
@@ -52,16 +52,16 @@ export function MapContainer({
 
     map.current.on("load", () => {
       setMapLoaded(true);
-      setMap(map.current);
+      if (map.current) setMap(map.current);
       
       // Setup Draw Events
-      map.current?.on("draw.create", (e: any) => {
+      map.current?.on("draw.create" as any, (e: any) => {
         if (onAreaCreate) onAreaCreate(e.features[0]);
       });
-      map.current?.on("draw.update", (e: any) => {
+      map.current?.on("draw.update" as any, (e: any) => {
         if (onAreaUpdate) onAreaUpdate(e.features[0]);
       });
-      map.current?.on("draw.delete", (e: any) => {
+      map.current?.on("draw.delete" as any, (e: any) => {
         if (onAreaDelete) onAreaDelete(e.features[0].id);
       });
     });

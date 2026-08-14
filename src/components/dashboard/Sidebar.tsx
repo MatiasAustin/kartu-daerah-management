@@ -91,10 +91,8 @@ export function MobileSidebar() {
 
   return (
     <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-white hover:bg-slate-800 px-2">
-          <Menu className="h-6 w-6" />
-        </Button>
+      <SheetTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-800 text-white h-8 px-2">
+        <Menu className="h-6 w-6" />
       </SheetTrigger>
       <SheetContent side="left" className="w-64 bg-slate-900 text-white border-r-slate-800 p-0 flex flex-col">
         <SheetTitle className="sr-only">Navigation</SheetTitle>

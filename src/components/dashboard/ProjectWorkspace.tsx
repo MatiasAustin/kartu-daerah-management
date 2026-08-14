@@ -198,10 +198,8 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
       {/* Mobile Floating Trigger */}
       <div className="absolute top-4 left-4 z-20 md:hidden">
         <Sheet open={isMobileListOpen} onOpenChange={setIsMobileListOpen}>
-          <SheetTrigger asChild>
-            <Button variant="default" className="shadow-lg rounded-full h-12 w-12 p-0 bg-white text-slate-900 border border-slate-200 hover:bg-slate-50">
-              <ListFilter className="h-5 w-5" />
-            </Button>
+          <SheetTrigger className="shadow-lg rounded-full flex items-center justify-center h-12 w-12 p-0 bg-white text-slate-900 border border-slate-200 hover:bg-slate-50">
+            <ListFilter className="h-5 w-5" />
           </SheetTrigger>
           <SheetContent side="left" className="w-[85vw] sm:w-80 p-0 flex flex-col bg-white">
             <SheetTitle className="sr-only">Areas List</SheetTitle>
