@@ -398,8 +398,15 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
           setIsAreaModalOpen(false);
           setAreaFormData(null);
         }}
-        onSuccess={(freshAreas) => {
-          setAreas(freshAreas);
+        onSuccess={({ type: actionType, area: savedArea }) => {
+          if (actionType === "create") {
+            // Attach group color so the map renders it with the right color immediately
+            const group = groups.find((g: any) => g.id === savedArea.group_id);
+            const areaWithGroup = { ...savedArea, groups: group ? { color: group.color } : null };
+            setAreas((prev: any[]) => [...prev, areaWithGroup]);
+          } else if (actionType === "edit") {
+            setAreas((prev: any[]) => prev.map((a: any) => a.id === savedArea.id ? { ...a, ...savedArea } : a));
+          }
           setIsAreaModalOpen(false);
           setAreaFormData(null);
         }}

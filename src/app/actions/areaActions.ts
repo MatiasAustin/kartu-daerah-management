@@ -13,17 +13,17 @@ export async function createArea(projectId: string, groupId: string, data: any) 
 
   // Expecting data.geometry to be a valid GeoJSON Polygon/MultiPolygon
   // We use PostGIS ST_GeomFromGeoJSON for insertion.
-  const { error } = await supabase.from("areas").insert({
+  const { data: created, error } = await supabase.from("areas").insert({
     project_id: projectId,
     group_id: groupId,
     area_number: data.area_number,
     name: data.name,
     description: data.description,
-    geometry: data.geometry, // Supabase PostREST handles GeoJSON to PostGIS Geometry automatically!
+    geometry: data.geometry,
     center_lng: data.center_lng,
     center_lat: data.center_lat,
     created_by: user.id
-  });
+  }).select("id, project_id, group_id, area_number, name, description, center_lng, center_lat, created_by, created_at").single();
 
   if (error) {
     console.error("Error creating area:", error);
@@ -31,7 +31,7 @@ export async function createArea(projectId: string, groupId: string, data: any) 
   }
 
   revalidatePath(`/dashboard/projects/${projectId}`);
-  return { success: true };
+  return { success: true, area: created };
 }
 
 export async function updateArea(areaId: string, projectId: string, data: any) {

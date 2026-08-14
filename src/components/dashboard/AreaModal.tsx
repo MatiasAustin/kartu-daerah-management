@@ -105,15 +105,34 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
     if (res?.error) {
       setError(res.error);
     } else {
-      // After saving, fetch the fresh area record (with geojson geometry) from Supabase
       if (onSuccess) {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        const { data: freshAreas } = await supabase
-          .from("areas")
-          .select("*, groups(color)")
-          .eq("project_id", projectId);
-        onSuccess(freshAreas || []);
+        if (isEditing) {
+          // For edits, pass back the updated fields merged with the existing record
+          onSuccess({
+            type: "edit",
+            area: {
+              ...initialData,
+              area_number: areaNumber,
+              name,
+              description,
+            },
+          });
+        } else {
+          // For new areas: use the DB record but inject the drawn geometry so the map can render it immediately
+          onSuccess({
+            type: "create",
+            area: {
+              ...(res.area || {}),
+              area_number: areaNumber,
+              name,
+              description,
+              group_id: groupId,
+              geometry: initialData?.geometry, // the raw drawn GeoJSON polygon
+              geojson: initialData?.geometry,  // use the same for geojson field
+              groups: null, // will be filled in by parent
+            },
+          });
+        }
       }
       onClose();
     }
