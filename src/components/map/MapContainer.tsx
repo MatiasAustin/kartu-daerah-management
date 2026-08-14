@@ -579,6 +579,17 @@ export function MapContainer({
     }
     console.log("[MapDebug] validFeatures:", validFeatures.length, validFeatures[0]);
 
+    // TEST: Add a huge hardcoded polygon over Indonesia to see if the layer renders at all
+    validFeatures.push({
+      type: "Feature",
+      id: "test-hardcoded-polygon",
+      geometry: {
+        type: "Polygon",
+        coordinates: [[[100.0, -5.0], [115.0, -5.0], [115.0, -10.0], [100.0, -10.0], [100.0, -5.0]]]
+      },
+      properties: { color: "#00ff00" }
+    });
+
     const source = map.current.getSource("areas-source") as maplibregl.GeoJSONSource;
     if (source) {
       console.log("[MapDebug] Setting data to source!");
