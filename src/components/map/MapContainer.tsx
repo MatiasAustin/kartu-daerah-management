@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import * as maplibregl from "maplibre-gl";
+import maplibregl from "maplibre-gl";
+import type * as MapLibreTypes from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useMapStore } from "@/lib/store/mapStore";
 
@@ -163,7 +164,7 @@ export function MapContainer({
 }: MapContainerProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const overlayCanvas = useRef<HTMLCanvasElement>(null); // ← Canvas overlay for pen tool
-  const map = useRef<maplibregl.Map | null>(null);
+  const map = useRef<MapLibreTypes.Map | null>(null);
   const { setMap, setSelectedAreaId, selectedAreaId } = useMapStore();
   const [mapLoaded, setMapLoaded] = useState(false);
 
@@ -220,7 +221,7 @@ export function MapContainer({
 
     // Project geographic coords → pixel coords
     const px = (lnglat: [number, number]) => {
-      const p = m.project(lnglat as maplibregl.LngLatLike);
+      const p = m.project(lnglat as MapLibreTypes.LngLatLike);
       return { x: p.x, y: p.y };
     };
 
@@ -356,7 +357,7 @@ export function MapContainer({
   // ─── Edit source ──────────────────────────────────────────────────────────
   const setEditSource = useCallback((geom: any) => {
     if (!map.current || !geom) {
-      (map.current?.getSource("edit-verts") as maplibregl.GeoJSONSource)?.setData({ type: "FeatureCollection", features: [] } as any);
+      (map.current?.getSource("edit-verts") as MapLibreTypes.GeoJSONSource)?.setData({ type: "FeatureCollection", features: [] } as any);
       return;
     }
     const coords = geom.coordinates[0] as [number, number][];
@@ -367,7 +368,7 @@ export function MapContainer({
         type: "Feature", geometry: { type: "Point", coordinates: c }, properties: { index: i },
       })),
     ];
-    (map.current.getSource("edit-verts") as maplibregl.GeoJSONSource)?.setData({ type: "FeatureCollection", features } as any);
+    (map.current.getSource("edit-verts") as MapLibreTypes.GeoJSONSource)?.setData({ type: "FeatureCollection", features } as any);
   }, []);
 
   // ─── Resize canvas to match map container ────────────────────────────────
@@ -390,7 +391,7 @@ export function MapContainer({
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    map.current = new maplibregl.Map({
+    map.current = new MapLibreTypes.Map({
       container: mapContainer.current,
       style: RASTER_STYLE,
       center: [106.8272, -6.1751],
@@ -457,14 +458,14 @@ export function MapContainer({
       });
 
       // ── Pen tool: map click ───────────────────────────────────────────
-      m.on("click", (e: maplibregl.MapMouseEvent) => {
+      m.on("click", (e: MapLibreTypes.MapMouseEvent) => {
         if (toolModeRef.current !== "pen") return;
         const lngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         const pts = penPointsRef.current;
 
         // Snap-to-close
         if (pts.length >= 3) {
-          const startPx = m.project(pts[0] as maplibregl.LngLatLike);
+          const startPx = m.project(pts[0] as MapLibreTypes.LngLatLike);
           const clickPx = m.project(lngLat);
           if (Math.hypot(startPx.x - clickPx.x, startPx.y - clickPx.y) < 18) {
             closePen();
@@ -478,14 +479,14 @@ export function MapContainer({
       });
 
       // ── Pen tool: mousemove ───────────────────────────────────────────
-      m.on("mousemove", (e: maplibregl.MapMouseEvent) => {
+      m.on("mousemove", (e: MapLibreTypes.MapMouseEvent) => {
         if (toolModeRef.current !== "pen") return;
         mousePosRef.current = [e.lngLat.lng, e.lngLat.lat];
         const pts = penPointsRef.current;
 
         if (pts.length >= 3) {
-          const startPx = m.project(pts[0] as maplibregl.LngLatLike);
-          const mPx = m.project(mousePosRef.current as maplibregl.LngLatLike);
+          const startPx = m.project(pts[0] as MapLibreTypes.LngLatLike);
+          const mPx = m.project(mousePosRef.current as MapLibreTypes.LngLatLike);
           const near = Math.hypot(startPx.x - mPx.x, startPx.y - mPx.y) < 18;
           if (near !== isNearStartRef.current) {
             isNearStartRef.current = near;
@@ -517,14 +518,14 @@ export function MapContainer({
         m.getCanvas().style.cursor = "grabbing";
         m.dragPan.disable();
 
-        const onMove = (mv: maplibregl.MapMouseEvent) => {
+        const onMove = (mv: MapLibreTypes.MapMouseEvent) => {
           if (draggingVertexRef.current === null || !editGeometryRef.current) return;
           const coords = [...editGeometryRef.current.coordinates[0]] as [number, number][];
           coords[draggingVertexRef.current] = [mv.lngLat.lng, mv.lngLat.lat];
           if (draggingVertexRef.current === 0) coords[coords.length - 1] = [mv.lngLat.lng, mv.lngLat.lat];
           const newGeom = { ...editGeometryRef.current, coordinates: [coords] };
           editGeometryRef.current = newGeom;
-          (m.getSource("edit-verts") as maplibregl.GeoJSONSource)?.setData({
+          (m.getSource("edit-verts") as MapLibreTypes.GeoJSONSource)?.setData({
             type: "FeatureCollection",
             features: [
               { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: { type: "ring" } },
@@ -569,11 +570,19 @@ export function MapContainer({
       });
       const geo = resolveGeometry(a);
       if (geo) {
+        // Only pick primitive properties to avoid passing complex/nested objects to MapLibre worker
+        const safeProps = {
+          id: a.id,
+          name: a.name,
+          area_number: a.area_number,
+          color: a.groups?.color || a.group_color || "#ef4444",
+        };
+
         validFeatures.push({
           type: "Feature",
           id: a.id,
           geometry: geo,
-          properties: { ...a, color: a.groups?.color || a.group_color || "#ef4444" },
+          properties: safeProps,
         });
       }
     }
@@ -590,7 +599,7 @@ export function MapContainer({
       properties: { color: "#00ff00" }
     });
 
-    const source = map.current.getSource("areas-source") as maplibregl.GeoJSONSource;
+    const source = map.current.getSource("areas-source") as MapLibreTypes.GeoJSONSource;
     if (source) {
       console.log("[MapDebug] Setting data to source!");
       source.setData({
