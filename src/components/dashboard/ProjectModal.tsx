@@ -6,15 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { createProject } from "@/app/actions/projectActions";
+import { createProject, updateProject } from "@/app/actions/projectActions";
 import { useRouter } from "next/navigation";
 
 interface ProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialData?: any;
 }
 
-export function ProjectModal({ isOpen, onClose }: ProjectModalProps) {
+export function ProjectModal({ isOpen, onClose, initialData }: ProjectModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -25,16 +26,34 @@ export function ProjectModal({ isOpen, onClose }: ProjectModalProps) {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const result = await createProject(formData);
+    
+    if (initialData) {
+      const result = await updateProject(initialData.id, {
+        name: formData.get("name"),
+        description: formData.get("description"),
+        is_public: initialData.is_public
+      });
 
-    setIsLoading(false);
+      setIsLoading(false);
 
-    if (result.error) {
-      setError(result.error);
-    } else if (result.project) {
-      onClose();
-      // Redirect to the newly created project
-      router.push(`/dashboard/projects/${result.project.id}`);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        onClose();
+        router.refresh();
+      }
+    } else {
+      const result = await createProject(formData);
+
+      setIsLoading(false);
+
+      if (result.error) {
+        setError(result.error);
+      } else if (result.project) {
+        onClose();
+        // Redirect to the newly created project
+        router.push(`/dashboard/projects/${result.project.id}`);
+      }
     }
   };
 
@@ -42,7 +61,7 @@ export function ProjectModal({ isOpen, onClose }: ProjectModalProps) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
+          <DialogTitle>{initialData ? "Edit Project" : "Create New Project"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -50,12 +69,12 @@ export function ProjectModal({ isOpen, onClose }: ProjectModalProps) {
 
           <div className="space-y-2">
             <Label htmlFor="name">Project Name <span className="text-red-500">*</span></Label>
-            <Input id="name" name="name" placeholder="e.g. Jakarta Region Mapping" required />
+            <Input id="name" name="name" defaultValue={initialData?.name} placeholder="e.g. Jakarta Region Mapping" required />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Description (Optional)</Label>
-            <Textarea id="description" name="description" placeholder="Brief description of this project..." />
+            <Textarea id="description" name="description" defaultValue={initialData?.description} placeholder="Brief description of this project..." />
           </div>
 
           <DialogFooter className="pt-4">
@@ -63,7 +82,7 @@ export function ProjectModal({ isOpen, onClose }: ProjectModalProps) {
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Creating..." : "Create Project"}
+              {isLoading ? "Saving..." : (initialData ? "Save Changes" : "Create Project")}
             </Button>
           </DialogFooter>
         </form>

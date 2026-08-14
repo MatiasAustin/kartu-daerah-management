@@ -24,6 +24,7 @@ import { GroupModal } from "./GroupModal";
 import { AreaModal } from "./AreaModal";
 import { ManagerModal } from "./ManagerModal";
 import { ShareModal } from "./ShareModal";
+import { ImportKmlButton } from "./ImportKmlButton";
 import { deleteArea } from "@/app/actions/areaActions";
 import { deleteGroup } from "@/app/actions/groupActions";
 
@@ -143,15 +144,21 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas }: any) 
       <div className="p-4 border-b border-slate-200 bg-slate-50 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900 truncate pr-2">{project.name}</h2>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0 shrink-0"
-            title="Share Project"
-            onClick={() => openShareModal({ name: project.name, isProject: true })}
-          >
-            <Share2 className="h-4 w-4 text-slate-600" />
-          </Button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <ImportKmlButton projectId={project.id} onSuccess={() => {
+              // Refresh both areas and groups from DB after successful import
+              window.location.reload(); 
+            }} />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0 shrink-0"
+              title="Share Project"
+              onClick={() => openShareModal({ name: project.name, isProject: true })}
+            >
+              <Share2 className="h-4 w-4 text-slate-600" />
+            </Button>
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />

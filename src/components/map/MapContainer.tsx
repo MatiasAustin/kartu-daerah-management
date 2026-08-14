@@ -547,9 +547,6 @@ export function MapContainer({
           m.dragPan.enable();
           m.getCanvas().style.cursor = "grab";
           draggingVertexRef.current = null;
-          if (editingAreaIdRef.current && editGeometryRef.current) {
-            onAreaUpdateRef.current?.(editingAreaIdRef.current, editGeometryRef.current);
-          }
         };
 
         m.on("mousemove", onMove as any);
@@ -662,6 +659,13 @@ export function MapContainer({
     setEditingAreaId(null);
     setEditSource(null);
   }, [setEditSource]);
+
+  const saveEditVertices = useCallback(() => {
+    if (editingAreaIdRef.current && editGeometryRef.current) {
+      onAreaUpdateRef.current?.(editingAreaIdRef.current, editGeometryRef.current);
+    }
+    stopEditVertices();
+  }, [stopEditVertices]);
 
   useEffect(() => {
     (window as any).__mapEditVertices = startEditVertices;
@@ -785,6 +789,24 @@ export function MapContainer({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Editing Toolbar */}
+      {editingAreaId && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-2 bg-white p-2 rounded-lg shadow-lg border border-slate-200">
+          <button
+            onClick={saveEditVertices}
+            className="px-4 py-1.5 text-sm font-medium bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors shadow-sm"
+          >
+            Save Anchors
+          </button>
+          <button
+            onClick={stopEditVertices}
+            className="px-4 py-1.5 text-sm font-medium bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors shadow-sm"
+          >
+            Cancel
+          </button>
         </div>
       )}
 

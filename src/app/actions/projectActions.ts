@@ -39,3 +39,36 @@ export async function createProject(formData: FormData) {
   revalidatePath("/dashboard/projects");
   return { success: true, project: data };
 }
+
+export async function updateProject(projectId: string, data: any) {
+  const supabase = await createClient();
+  
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      name: data.name,
+      description: data.description,
+      is_public: data.is_public
+    })
+    .eq("id", projectId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/projects");
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  return { success: true };
+}
+
+export async function deleteProject(projectId: string) {
+  const supabase = await createClient();
+  
+  const { error } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", projectId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/projects");
+  return { success: true };
+}

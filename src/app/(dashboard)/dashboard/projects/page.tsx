@@ -6,6 +6,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { NewProjectButton } from "@/components/dashboard/NewProjectButton";
+import { ProjectCardActions } from "@/components/dashboard/ProjectCardActions";
 
 export default async function ProjectsPage() {
   const supabase = await createClient();
@@ -81,9 +82,14 @@ export default async function ProjectsPage() {
             <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
               <Card className="hover:border-slate-400 transition-colors cursor-pointer h-full">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FolderKanban className="h-5 w-5 text-indigo-500" />
-                    {project.name}
+                  <CardTitle className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <FolderKanban className="h-5 w-5 text-indigo-500" />
+                      {project.name}
+                    </div>
+                    {project.owner_id === user.id && (
+                      <ProjectCardActions project={project} />
+                    )}
                   </CardTitle>
                   <CardDescription className="line-clamp-2 mt-2">
                     {project.description || "No description provided."}

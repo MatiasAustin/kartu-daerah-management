@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { QRCodeSVG } from "qrcode.react";
+import { Printer, Navigation } from "lucide-react";
 
 interface PrintAreaCardProps {
   project: any;
@@ -135,54 +136,100 @@ export function PrintAreaCard({ project, group, area }: PrintAreaCardProps) {
   }, [area, group]);
 
   return (
-    <div className="w-full h-screen bg-white text-black p-8 flex flex-col mx-auto max-w-4xl print:w-full print:max-w-none print:p-0 print:m-0" style={{ minHeight: '100vh' }}>
+    <div className="min-h-screen bg-slate-100 py-8 px-4 flex flex-col items-center justify-center print:bg-white print:p-0">
       
-      {/* Header */}
-      <header className="border-b-4 border-slate-900 pb-4 mb-6 print:border-b-4 print:border-black flex justify-between items-end">
-        <div>
-          <p className="text-sm font-bold tracking-widest uppercase text-slate-500 mb-1">{project.name}</p>
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">{group.name}</h1>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Area Number</p>
-          <h2 className="text-3xl font-bold text-slate-800 bg-slate-100 px-4 py-1 rounded-md print:bg-white print:border print:border-slate-300">
-            {area.area_number}
-          </h2>
-        </div>
-      </header>
+      {/* Floating Action Bar (Hidden on print) */}
+      <div className="fixed top-6 right-6 flex gap-3 print:hidden z-50">
+        <button
+          onClick={() => window.print()}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-medium"
+        >
+          <Printer className="w-4 h-4" />
+          Print / Export PDF
+        </button>
+      </div>
 
-      {/* Main Body */}
-      <div className="flex-1 flex flex-col gap-6">
+      {/* A5 Card Container */}
+      {/* A5 physical size is 148mm x 210mm */}
+      <div 
+        className="bg-white text-black flex flex-col relative shadow-2xl print:shadow-none mx-auto overflow-hidden border border-slate-200 print:border-none"
+        style={{
+          width: "148mm",
+          height: "210mm",
+          padding: "12mm", // Standard print margin
+        }}
+      >
         
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-2">{area.name}</h3>
+        {/* Header */}
+        <header className="border-b-[3px] border-black pb-3 mb-4 flex justify-between items-end shrink-0">
+          <div className="flex-1 pr-4">
+            <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-0.5">{project.name}</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-black leading-tight line-clamp-2">{group.name}</h1>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Area No.</p>
+            <h2 className="text-2xl font-black text-black bg-slate-100 border border-slate-300 px-3 py-1 rounded-md print:bg-white print:border-2 print:border-black">
+              {area.area_number}
+            </h2>
+          </div>
+        </header>
+
+        {/* Main Body */}
+        <div className="flex-1 flex flex-col gap-3 min-h-0">
+          
+          <div className="shrink-0">
+            <h3 className="text-xl font-bold text-black mb-1.5 leading-snug">{area.name}</h3>
             {area.description && (
-              <p className="text-slate-600 max-w-xl text-sm border-l-4 border-slate-200 pl-3">
+              <p className="text-black text-xs border-l-[3px] border-slate-300 pl-2 line-clamp-2">
                 {area.description}
               </p>
             )}
           </div>
-        </div>
 
-        {/* Map Container */}
-        <div className="flex-1 relative w-full rounded-xl overflow-hidden border-2 border-slate-200 shadow-sm print:rounded-none print:shadow-none print:border-4 print:border-slate-900 bg-slate-50" style={{ minHeight: '50vh' }}>
-          <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+          {/* Map Container */}
+          <div className="flex-1 relative w-full border-[3px] border-black rounded-lg overflow-hidden bg-slate-50 shadow-inner print:shadow-none min-h-[50%]">
+            <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+          </div>
+
         </div>
 
         {/* Footer / QR Code */}
-        <footer className="mt-auto pt-6 border-t-2 border-slate-200 flex justify-between items-center print:border-black">
-          <div className="space-y-1">
-            <h4 className="font-bold text-slate-900">Navigation Directions</h4>
-            <p className="text-xs text-slate-500">Scan barcode using your smartphone to open Google Maps navigation directly to the center of this area.</p>
-            <p className="text-[10px] text-slate-400 font-mono pt-2">Coordinates: {area.center_lat?.toFixed(5)}, {area.center_lng?.toFixed(5)}</p>
+        <footer className="mt-4 pt-3 border-t-[3px] border-black flex justify-between items-center shrink-0">
+          <div className="space-y-1 flex-1 pr-4">
+            <h4 className="font-bold text-black text-sm uppercase tracking-wide">Navigation Directions</h4>
+            <p className="text-[10px] text-slate-600 leading-tight max-w-[200px]">Scan this QR code using your smartphone camera to open Google Maps navigation directly to this area.</p>
+            <p className="text-[9px] text-slate-500 font-mono mt-1 font-semibold">Coords: {area.center_lat?.toFixed(5)}, {area.center_lng?.toFixed(5)}</p>
+            
+            <a 
+              href={googleMapsUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded text-xs font-semibold print:hidden border border-indigo-200 transition-colors"
+            >
+              <Navigation className="w-3 h-3" />
+              Get Directions
+            </a>
           </div>
-          <div className="shrink-0 bg-white p-2 border border-slate-200 rounded-lg shadow-sm print:shadow-none print:border-black">
-            <QRCodeSVG value={googleMapsUrl} size={100} />
+          <div className="shrink-0 bg-white p-1.5 border-2 border-black rounded-xl">
+            <QRCodeSVG value={googleMapsUrl} size={76} level="H" />
           </div>
         </footer>
 
       </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          @page {
+            size: A5 portrait;
+            margin: 0;
+          }
+          body {
+            background-color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      `}} />
     </div>
   );
 }
