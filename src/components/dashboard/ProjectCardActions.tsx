@@ -42,7 +42,7 @@ export function ProjectCardActions({ project }: { project: any }) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger 
-          onClick={(e) => e.stopPropagation()} 
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} 
           className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors focus:outline-none"
         >
           <MoreVertical className="h-4 w-4 text-slate-500" />

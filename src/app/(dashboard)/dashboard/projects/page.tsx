@@ -6,7 +6,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { NewProjectButton } from "@/components/dashboard/NewProjectButton";
-import { ProjectCardActions } from "@/components/dashboard/ProjectCardActions";
+import { ProjectsList } from "@/components/dashboard/ProjectsList";
 
 export default async function ProjectsPage() {
   const supabase = await createClient();
@@ -77,37 +77,7 @@ export default async function ProjectsPage() {
           <NewProjectButton variant="empty_state" />
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
-              <Card className="hover:border-slate-400 transition-colors cursor-pointer h-full">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <FolderKanban className="h-5 w-5 text-indigo-500" />
-                      {project.name}
-                    </div>
-                    {project.owner_id === user.id && (
-                      <ProjectCardActions project={project} />
-                    )}
-                  </CardTitle>
-                  <CardDescription className="line-clamp-2 mt-2">
-                    {project.description || "No description provided."}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-slate-500 mt-4">
-                    <div className="flex items-center gap-1">
-                      <Globe className="h-4 w-4" />
-                      {project.is_public ? "Public" : "Private"}
-                    </div>
-                    <span>{new Date(project.created_at).toLocaleDateString()}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <ProjectsList projects={projects} currentUserId={user.id} />
       )}
     </div>
   );
