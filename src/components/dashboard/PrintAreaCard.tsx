@@ -11,6 +11,76 @@ if (typeof window !== "undefined") {
 import { QRCodeSVG } from "qrcode.react";
 import { Printer, Navigation } from "lucide-react";
 
+// ─── EWKB decoder ────────────────────────────────────────────────────────────
+function ewkbHexToGeoJSON(hex: string): any | null {
+  try {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+    const view = new DataView(bytes.buffer);
+    let offset = 0;
+    const byteOrder = view.getUint8(offset++);
+    const le = byteOrder === 1;
+    const readUint32 = () => { const v = view.getUint32(offset, le); offset += 4; return v; };
+    const readFloat64 = () => { const v = view.getFloat64(offset, le); offset += 8; return v; };
+    let wkbType = readUint32();
+    const hasZ = (wkbType & 0x80000000) !== 0;
+    const hasM = (wkbType & 0x40000000) !== 0;
+    const hasSRID = (wkbType & 0x20000000) !== 0;
+    wkbType = wkbType & 0x0fffffff;
+    if (hasSRID) readUint32();
+    const readPoint = (): [number, number] => {
+      const x = readFloat64(); const y = readFloat64();
+      if (hasZ) readFloat64(); if (hasM) readFloat64();
+      return [x, y];
+    };
+    const readRing = (): [number, number][] => {
+      const count = readUint32(); const pts: [number, number][] = [];
+      for (let i = 0; i < count; i++) pts.push(readPoint());
+      return pts;
+    };
+    if (wkbType === 1) return { type: "Point", coordinates: readPoint() };
+    else if (wkbType === 2) {
+      const count = readUint32(); const pts: [number, number][] = [];
+      for (let i = 0; i < count; i++) pts.push(readPoint());
+      return { type: "LineString", coordinates: pts };
+    } else if (wkbType === 3) {
+      const numRings = readUint32(); const rings: [number, number][][] = [];
+      for (let i = 0; i < numRings; i++) rings.push(readRing());
+      return { type: "Polygon", coordinates: rings };
+    } else if (wkbType === 6) {
+      const numGeoms = readUint32(); const polys: [number, number][][][] = [];
+      for (let i = 0; i < numGeoms; i++) {
+        offset++; let subType = readUint32();
+        if ((subType & 0x20000000) !== 0) readUint32();
+        subType = subType & 0x0fffffff;
+        const numRings = readUint32(); const rings: [number, number][][] = [];
+        for (let j = 0; j < numRings; j++) rings.push(readRing());
+        polys.push(rings);
+      }
+      return { type: "MultiPolygon", coordinates: polys };
+    }
+    return null;
+  } catch { return null; }
+}
+
+function resolveGeometry(area: any): any | null {
+  let geo = area.geojson ?? area.geometry;
+  if (!geo) return null;
+  if (typeof geo === "object" && geo !== null && geo.type) {
+    if (geo.crs) { const { crs, ...rest } = geo; return rest; }
+    return geo;
+  }
+  if (typeof geo === "string" && geo.trimStart().startsWith("{")) {
+    try { 
+      const parsed = JSON.parse(geo); 
+      if (parsed.crs) { const { crs, ...rest } = parsed; return rest; }
+      return parsed;
+    } catch { return null; }
+  }
+  if (typeof geo === "string" && /^[0-9a-fA-F]+$/.test(geo)) return ewkbHexToGeoJSON(geo);
+  return null;
+}
+
 interface PrintAreaCardProps {
   project: any;
   group: any;
@@ -82,7 +152,8 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
 
   // Second effect to handle source, layers, and fitting bounds once map is loaded
   useEffect(() => {
-    if (!mapLoaded || !map.current || !area.geometry) return;
+    const geo = resolveGeometry(area);
+    if (!mapLoaded || !map.current || !geo) return;
     const m = map.current;
     const sourceId = "print-area-source";
 
@@ -120,7 +191,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
         type: "FeatureCollection",
         features: [{
           type: "Feature",
-          geometry: area.geometry,
+          geometry: geo,
           properties: {}
         }]
       } as any);
@@ -140,8 +211,8 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
         }
       };
 
-      if (area.geometry && area.geometry.coordinates) {
-        extractCoords(area.geometry.coordinates);
+      if (geo && geo.coordinates) {
+        extractCoords(geo.coordinates);
         
         // Fit map bounds if valid bbox was found
         if (minLng < maxLng && minLat < maxLat) {
