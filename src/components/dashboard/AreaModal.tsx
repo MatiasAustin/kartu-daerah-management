@@ -102,7 +102,7 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
 
     setIsLoading(false);
 
-    if (res?.error) {
+    if (res && "error" in res && res.error) {
       setError(res.error);
     } else {
       if (onSuccess) {
@@ -119,10 +119,11 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
           });
         } else {
           // For new areas: use the DB record but inject the drawn geometry so the map can render it immediately
+          const createdArea = res && "area" in res ? res.area : null;
           onSuccess({
             type: "create",
             area: {
-              ...(res.area || {}),
+              ...(createdArea || {}),
               area_number: areaNumber,
               name,
               description,
