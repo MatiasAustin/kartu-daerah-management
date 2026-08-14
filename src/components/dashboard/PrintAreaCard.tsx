@@ -21,6 +21,7 @@ interface PrintAreaCardProps {
 export function PrintAreaCard({ project, group, area, isPublicView = false }: PrintAreaCardProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   // Generate Google Maps URL using center lat/lng
   const googleMapsUrl = area.center_lat && area.center_lng 
@@ -66,29 +67,39 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       center: center as [number, number],
       zoom: 14,
       interactive: false,
+      preserveDrawingBuffer: true,
     });
 
     map.current.on("load", () => {
-      if (!map.current || !area.geometry) return;
+      setMapLoaded(true);
+    });
 
-      const sourceId = "print-area-source";
-      
-      const geojson = {
-        type: "FeatureCollection",
-        features: [{
-          type: "Feature",
-          id: area.id,
-          geometry: area.geometry,
-          properties: {}
-        }]
-      };
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, [area.center_lng, area.center_lat]);
 
-      map.current.addSource(sourceId, {
+  // Second effect to handle source, layers, and fitting bounds once map is loaded
+  useEffect(() => {
+    if (!mapLoaded || !map.current || !area.geometry) return;
+    const m = map.current;
+    const sourceId = "print-area-source";
+
+    if (!m.getSource(sourceId)) {
+      m.addSource(sourceId, {
         type: "geojson",
-        data: geojson as any,
+        data: {
+          type: "FeatureCollection",
+          features: [{
+            type: "Feature",
+            geometry: area.geometry,
+            properties: {}
+          }]
+        } as any,
       });
 
-      map.current.addLayer({
+      m.addLayer({
         id: "print-area-fill",
         type: "fill",
         source: sourceId,
@@ -98,7 +109,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
         },
       });
 
-      map.current.addLayer({
+      m.addLayer({
         id: "print-area-outline",
         type: "line",
         source: sourceId,
@@ -127,19 +138,14 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
         
         // Fit map bounds if valid bbox was found
         if (minLng < maxLng && minLat < maxLat) {
-          map.current.fitBounds(
+          m.fitBounds(
             [[minLng, minLat], [maxLng, maxLat]], 
             { padding: 50, duration: 0 } // No animation for print
           );
         }
       }
-    });
-
-    return () => {
-      map.current?.remove();
-      map.current = null;
-    };
-  }, [area, group]);
+    }
+  }, [mapLoaded, area, group]);
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 px-4 flex flex-col items-center justify-center print:bg-white print:p-0">
