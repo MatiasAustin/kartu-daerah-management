@@ -75,10 +75,12 @@ export function ManagerRow({ manager }: { manager: any }) {
   return (
     <>
       <tr className="bg-white border-b border-slate-100 hover:bg-slate-50">
-        <td className="px-6 py-4 font-medium text-slate-900">
-          {manager.profiles?.email || manager.user_id}
-          {manager.profiles?.full_name && (
-            <div className="text-xs text-slate-500 font-normal">{manager.profiles.full_name}</div>
+        <td className="px-6 py-4">
+          <div className="font-medium text-slate-900">
+            {manager.profiles?.full_name || manager.profiles?.email || manager.user_id}
+          </div>
+          {manager.profiles?.full_name && manager.profiles?.email && (
+            <div className="text-xs text-slate-500">{manager.profiles.email}</div>
           )}
         </td>
         <td className="px-6 py-4">
