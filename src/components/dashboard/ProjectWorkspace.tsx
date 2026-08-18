@@ -64,6 +64,7 @@ export function ProjectWorkspace({
 
   // Modal States
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [editGroupTarget, setEditGroupTarget] = useState<any>(null);
   const [isReferenceModalOpen, setIsReferenceModalOpen] = useState(false);
   const [editReferenceTarget, setEditReferenceTarget] = useState<any>(null);
   const [deleteReferenceTarget, setDeleteReferenceTarget] = useState<any>(null);
@@ -375,6 +376,15 @@ export function ProjectWorkspace({
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0"
+                      title="Edit Group"
+                      onClick={() => { setEditGroupTarget(group); setIsGroupModalOpen(true); }}
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-slate-400 hover:text-indigo-500" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
                       title="Share Group"
                       onClick={() => openShareModal({ id: group.id, name: group.name, isProject: false })}
                     >
@@ -678,11 +688,13 @@ export function ProjectWorkspace({
       {/* Modals */}
       <GroupModal
         isOpen={isGroupModalOpen}
-        onClose={() => setIsGroupModalOpen(false)}
+        onClose={() => { setIsGroupModalOpen(false); setEditGroupTarget(null); }}
         projectId={project.id}
+        initialData={editGroupTarget}
         onSuccess={async () => {
           await refreshGroups();
           setIsGroupModalOpen(false);
+          setEditGroupTarget(null);
         }}
       />
 
