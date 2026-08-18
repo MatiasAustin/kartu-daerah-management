@@ -133,7 +133,7 @@ export function AreaModal({
     } 
     
     // Save assignment if publisherId is valid or changed
-    let finalAreaId = isEditing ? initialData.id : res?.data?.id;
+    let finalAreaId = isEditing ? initialData.id : (res && "area" in res && res.area ? res.area.id : null);
     if (finalAreaId) {
       const pubId = publisherId === "unassigned" ? null : publisherId;
       await assignAreaToPublisher(finalAreaId, pubId, projectId);
@@ -173,7 +173,6 @@ export function AreaModal({
         }
       }
       onClose();
-    }
   };
 
   return (<>
