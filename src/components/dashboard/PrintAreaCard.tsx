@@ -227,7 +227,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       `}} />
 
       {/* A5 Card Container Wrapper for Screen Scaling */}
-      <div className="w-full flex justify-center origin-top transform scale-[0.65] sm:scale-100 transition-transform print:scale-100 print:transform-none">
+      <div className="w-full flex justify-center origin-top transform scale-[0.65] sm:scale-100 transition-transform print:scale-100 print:transform-none -mb-[73.5mm] sm:mb-0">
         
         {/* A5 physical size is 148mm x 210mm */}
         <div 

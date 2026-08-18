@@ -20,7 +20,7 @@ export function AreaCommentsSidebar({
       {/* Mobile Toggle Button (Visible only on small screens) */}
       <button 
         onClick={() => setIsOpen(true)}
-        className="md:hidden fixed bottom-6 right-6 z-40 bg-indigo-600 text-white p-4 rounded-full shadow-xl hover:bg-indigo-700 transition-transform active:scale-95 flex items-center justify-center"
+        className="md:hidden fixed bottom-6 right-6 z-[60] bg-indigo-600 text-white p-4 rounded-full shadow-xl hover:bg-indigo-700 transition-transform active:scale-95 flex items-center justify-center"
       >
         <MessageSquare className="w-6 h-6" />
       </button>
@@ -28,7 +28,7 @@ export function AreaCommentsSidebar({
       {/* Overlay for mobile */}
       {isOpen && (
         <div 
-          className="md:hidden fixed inset-0 bg-slate-900/20 z-40 animate-in fade-in duration-200"
+          className="md:hidden fixed inset-0 bg-slate-900/20 z-[55] animate-in fade-in duration-200"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -37,9 +37,9 @@ export function AreaCommentsSidebar({
       <div className={`
         fixed md:static inset-x-0 bottom-0 md:inset-auto
         w-full md:w-96 md:h-screen md:border-l border-slate-200 bg-white md:sticky top-0 
-        shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:shadow-lg z-50 flex flex-col
+        shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:shadow-lg z-[60] flex flex-col
         transition-transform duration-300 ease-in-out
-        ${isOpen ? "translate-y-0 h-[85vh] rounded-t-2xl" : "translate-y-full md:translate-y-0 h-0 md:h-screen"}
+        ${isOpen ? "translate-y-0 h-[65vh] rounded-t-2xl" : "translate-y-full md:translate-y-0 h-0 md:h-screen"}
       `}>
         {/* Mobile Drag Handle & Close */}
         <div className="md:hidden flex items-center justify-center py-3 border-b border-slate-100 bg-white rounded-t-2xl shrink-0 cursor-pointer" onClick={() => setIsOpen(false)}>
