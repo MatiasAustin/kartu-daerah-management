@@ -453,56 +453,10 @@ export function MapContainer({
         });
       }
 
-      // First, remove old preset layers if they exist
-      const oldPresets = ["ref-solid", "ref-dashed", "ref-long-dashed", "ref-dotted", "ref-dash-dot"];
-      oldPresets.forEach(id => {
-        if (m.getLayer(id)) m.removeLayer(id);
-      });
+      // Note: Reference layers are now maintained dynamically in a separate useEffect
 
-      // Maintain a layer for each reference to support dynamic dash arrays
-      references.forEach(ref => {
-        const layerId = `ref-layer-${ref.id}`;
-        
-        let parsedDash: number[] | undefined;
-        if (ref.dash_array && ref.dash_array.trim() !== "") {
-          const parts = ref.dash_array.split(',').map((s: string) => parseFloat(s.trim())).filter((n: number) => !isNaN(n));
-          if (parts.length > 0) parsedDash = parts;
-        }
 
-        if (!m.getLayer(layerId)) {
-          const paintProps: any = {
-            "line-color": ref.color || "#000000",
-            "line-width": ref.weight || 2,
-          };
-          if (parsedDash) paintProps["line-dasharray"] = parsedDash;
 
-          m.addLayer({
-            id: layerId,
-            type: "line",
-            source: "references-source",
-            filter: ["==", ["get", "id"], ref.id],
-            paint: paintProps
-          });
-        } else {
-          // Update properties if layer exists (for realtime preview)
-          m.setPaintProperty(layerId, "line-color", ref.color || "#000000");
-          m.setPaintProperty(layerId, "line-width", ref.weight || 2);
-          if (parsedDash) {
-            m.setPaintProperty(layerId, "line-dasharray", parsedDash);
-          } else {
-            // MapLibre requires setting to something valid or we need a trick
-            m.setPaintProperty(layerId, "line-dasharray", [100000, 0]); 
-          }
-        }
-      });
-
-      // Cleanup layers for deleted references
-      const currentRefIds = new Set(references.map(r => `ref-layer-${r.id}`));
-      m.getStyle().layers?.forEach(layer => {
-        if (layer.id.startsWith('ref-layer-') && !currentRefIds.has(layer.id)) {
-          m.removeLayer(layer.id);
-        }
-      });
 
       // ── Edit vertex layers ────────────────────────────────────────────
       if (!m.getSource("edit-verts")) {
@@ -744,6 +698,57 @@ export function MapContainer({
         features: validFeatures,
       } as any);
     }
+
+    // First, remove old preset layers if they exist
+    const oldPresets = ["ref-solid", "ref-dashed", "ref-long-dashed", "ref-dotted", "ref-dash-dot"];
+    oldPresets.forEach(id => {
+      if (map.current?.getLayer(id)) map.current.removeLayer(id);
+    });
+
+    // Maintain a layer for each reference to support dynamic dash arrays
+    references.forEach(ref => {
+      const layerId = `ref-layer-${ref.id}`;
+      
+      let parsedDash: number[] | undefined;
+      if (ref.dash_array && ref.dash_array.trim() !== "") {
+        const parts = ref.dash_array.split(',').map((s: string) => parseFloat(s.trim())).filter((n: number) => !isNaN(n));
+        if (parts.length > 0) parsedDash = parts;
+      }
+
+      if (!map.current?.getLayer(layerId)) {
+        const paintProps: any = {
+          "line-color": ref.color || "#000000",
+          "line-width": ref.weight || 2,
+        };
+        if (parsedDash) paintProps["line-dasharray"] = parsedDash;
+
+        map.current?.addLayer({
+          id: layerId,
+          type: "line",
+          source: "references-source",
+          filter: ["==", ["get", "id"], ref.id],
+          paint: paintProps
+        });
+      } else {
+        // Update properties if layer exists (for realtime preview)
+        map.current.setPaintProperty(layerId, "line-color", ref.color || "#000000");
+        map.current.setPaintProperty(layerId, "line-width", ref.weight || 2);
+        if (parsedDash) {
+          map.current.setPaintProperty(layerId, "line-dasharray", parsedDash);
+        } else {
+          // MapLibre requires setting to something valid or we need a trick
+          map.current.setPaintProperty(layerId, "line-dasharray", [100000, 0]); 
+        }
+      }
+    });
+
+    // Cleanup layers for deleted references
+    const currentRefIds = new Set(references.map(r => `ref-layer-${r.id}`));
+    map.current.getStyle()?.layers?.forEach(layer => {
+      if (layer.id.startsWith('ref-layer-') && !currentRefIds.has(layer.id)) {
+        map.current?.removeLayer(layer.id);
+      }
+    });
   }, [references, mapLoaded, styleVersion]);
 
   // ── Sync fill/line style live ─────────────────────────────────────────────
