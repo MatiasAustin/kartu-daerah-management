@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
 import { createGroup, updateGroup } from "@/app/actions/groupActions";
 
 const PRESET_COLORS = [
@@ -152,8 +153,8 @@ export function GroupModal({ isOpen, onClose, projectId, initialData, onSuccess 
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading} style={{ backgroundColor: color, borderColor: color }}>
-              {isLoading ? "Saving..." : initialData?.id ? "Update Group" : "Create Group"}
+            <Button type="submit" disabled={isLoading} style={{ backgroundColor: color, borderColor: color }} className="min-w-[120px] text-white">
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin text-white" /> Saving...</> : initialData?.id ? "Update Group" : "Create Group"}
             </Button>
           </DialogFooter>
         </form>

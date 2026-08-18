@@ -7,9 +7,10 @@ import { revalidatePath } from "next/cache";
 export async function inviteManagerAction(formData: FormData) {
   const email = formData.get("email") as string;
   const groupId = formData.get("groupId") as string;
+  const fullName = formData.get("fullName") as string;
   
-  if (!email || !groupId) {
-    return { error: "Email and Group are required" };
+  if (!email || !groupId || !fullName) {
+    return { error: "Name, Email, and Group are required" };
   }
 
   try {
@@ -27,6 +28,7 @@ export async function inviteManagerAction(formData: FormData) {
     // 3. Invite the user
     let invitedUserId = "";
     const { data: inviteData, error: inviteError } = await adminAuthClient.auth.admin.inviteUserByEmail(email, {
+      data: { full_name: fullName },
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
     });
 
@@ -36,6 +38,8 @@ export async function inviteManagerAction(formData: FormData) {
         const { data: existingProfile } = await supabase.from('profiles').select('id').eq('email', email).single();
         if (existingProfile) {
           invitedUserId = existingProfile.id;
+          // Update their profile name if it was provided
+          await supabase.from('profiles').update({ full_name: fullName }).eq('id', invitedUserId);
         } else {
           return { error: `User is already registered but profile missing. Cannot assign.` };
         }
@@ -127,6 +131,22 @@ export async function updateManagerPermissionsAction(groupId: string, userId: st
       return { error: error.message };
     }
 
+    revalidatePath("/dashboard/users");
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || "An unexpected error occurred" };
+  }
+}
+
+export async function updateUserProfileNameAction(userId: string, newName: string) {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from('profiles').update({ full_name: newName }).eq('id', userId);
+    
+    if (error) {
+      return { error: error.message };
+    }
+    
     revalidatePath("/dashboard/users");
     return { success: true };
   } catch (err: any) {

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { removeManagerAction, updateManagerPermissionsAction } from "@/app/actions/users";
+import { removeManagerAction, updateManagerPermissionsAction, updateUserProfileNameAction } from "@/app/actions/users";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Trash2, Edit2, ShieldAlert } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit2, ShieldAlert, UserIcon, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +22,15 @@ import {
 
 export function ManagerRow({ manager }: { manager: any }) {
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Permissions state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Name edit state
+  const [isEditNameDialogOpen, setIsEditNameDialogOpen] = useState(false);
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [editName, setEditName] = useState(manager.profiles?.full_name || "");
   
   const [perms, setPerms] = useState({
     can_view: manager.permissions?.can_view ?? true,
@@ -53,6 +61,17 @@ export function ManagerRow({ manager }: { manager: any }) {
     }
   };
 
+  const handleSaveName = async () => {
+    setIsSavingName(true);
+    const res = await updateUserProfileNameAction(manager.user_id, editName);
+    setIsSavingName(false);
+    if (res.error) {
+      alert(res.error);
+    } else {
+      setIsEditNameDialogOpen(false);
+    }
+  };
+
   return (
     <>
       <tr className="bg-white border-b border-slate-100 hover:bg-slate-50">
@@ -77,6 +96,10 @@ export function ManagerRow({ manager }: { manager: any }) {
               <MoreHorizontal className="h-4 w-4 text-slate-500" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40 font-sans">
+              <DropdownMenuItem onClick={() => setIsEditNameDialogOpen(true)}>
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Edit Name</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                 <Edit2 className="mr-2 h-4 w-4" />
                 <span>Edit Role</span>
@@ -127,8 +150,34 @@ export function ManagerRow({ manager }: { manager: any }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSaving}>Cancel</Button>
-            <Button onClick={handleSavePermissions} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              {isSaving ? "Saving..." : "Save Changes"}
+            <Button onClick={handleSavePermissions} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]">
+              {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditNameDialogOpen} onOpenChange={setIsEditNameDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] font-sans">
+          <DialogHeader>
+            <DialogTitle>Edit User Name</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editName" className="text-sm font-medium">Full Name</Label>
+              <Input 
+                id="editName" 
+                value={editName} 
+                onChange={(e) => setEditName(e.target.value)} 
+                placeholder="John Doe" 
+                className="w-full"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditNameDialogOpen(false)} disabled={isSavingName}>Cancel</Button>
+            <Button onClick={handleSaveName} disabled={isSavingName} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]">
+              {isSavingName ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

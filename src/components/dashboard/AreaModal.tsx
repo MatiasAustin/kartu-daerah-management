@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
 import { createArea, updateArea } from "@/app/actions/areaActions";
 import { GroupModal } from "./GroupModal";
 
@@ -244,8 +245,8 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || (!isEditing && groups.length === 0)}>
-              {isLoading ? "Saving..." : isEditing ? "Update Area" : "Save Area"}
+            <Button type="submit" disabled={isLoading || (!isEditing && groups.length === 0)} className="min-w-[120px]">
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : isEditing ? "Update Area" : "Save Area"}
             </Button>
           </DialogFooter>
         </form>

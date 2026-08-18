@@ -5,6 +5,7 @@ import { inviteManagerAction } from "@/app/actions/users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 export function InviteUserForm({ projects, groups }: { projects: any[], groups: any[] }) {
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,12 @@ export function InviteUserForm({ projects, groups }: { projects: any[], groups: 
       )}
 
       <form action={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input id="fullName" name="fullName" type="text" required placeholder="John Doe" />
+          </div>
+          
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
             <Input id="email" name="email" type="email" required placeholder="manager@example.com" />
@@ -83,8 +89,8 @@ export function InviteUserForm({ projects, groups }: { projects: any[], groups: 
         </div>
         
         <div className="flex justify-end">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Sending Invite..." : "Invite Manager"}
+          <Button type="submit" disabled={loading} className="min-w-[140px]">
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : "Invite Manager"}
           </Button>
         </div>
       </form>

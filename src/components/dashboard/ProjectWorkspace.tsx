@@ -5,7 +5,7 @@ import { MapContainer, resolveGeometry } from "@/components/map/MapContainer";
 import { useMapStore } from "@/lib/store/mapStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, ChevronRight, MapPin, Users, Share2, ListFilter, Trash2, Pencil } from "lucide-react";
+import { Plus, Search, ChevronRight, MapPin, Users, Share2, ListFilter, Trash2, Pencil, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from "@/components/ui/sheet";
 import {
@@ -675,9 +675,9 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
             <AlertDialogAction
               onClick={handleDeleteArea}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white min-w-[120px]"
             >
-              {isDeleting ? "Deleting..." : "Delete Area"}
+              {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Delete Area"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -697,9 +697,9 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
             <AlertDialogAction
               onClick={handleDeleteGroup}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white min-w-[120px]"
             >
-              {isDeleting ? "Deleting..." : "Delete Group"}
+              {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Delete Group"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -719,9 +719,9 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
             <AlertDialogAction
               onClick={handleDeleteReference}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white min-w-[120px]"
             >
-              {isDeleting ? "Removing..." : "Remove"}
+              {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Removing...</> : "Remove"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

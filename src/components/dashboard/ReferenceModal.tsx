@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 import { getAvailableReferenceAreas } from "@/app/actions/referenceFetchActions";
 import { addProjectReference, updateProjectReference } from "@/app/actions/referenceActions";
 
@@ -219,7 +220,9 @@ export function ReferenceModal({
 
       <div className="flex justify-end gap-3 pt-6 mt-6">
         <Button type="button" variant="outline" onClick={onClose} className="rounded-lg font-sans">Cancel</Button>
-        <Button type="submit" disabled={loading} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-sans">{loading ? "Saving..." : isEdit ? "Save Changes" : "Add Reference"}</Button>
+        <Button type="submit" disabled={loading} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-sans min-w-[140px]">
+          {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : isEdit ? "Save Changes" : "Add Reference"}
+        </Button>
       </div>
     </form>
   );
