@@ -478,13 +478,22 @@ export function MapContainer({
           <div class="flex flex-col gap-2.5">
             <div>
               <h3 class="font-semibold text-slate-800 text-lg m-0 leading-tight">${area.properties.name || "Unknown Area"}</h3>
-              <div class="mt-1.5 px-2.5 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full w-fit">
-                ${area.properties.group_name || "No Group"}
+              <div class="flex flex-wrap gap-1.5 mt-1.5">
+                <span class="px-2.5 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full w-fit">
+                  ${area.properties.group_name || "No Group"}
+                </span>
+                ${area.properties.publisher_name ? `
+                <span class="px-2.5 py-0.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full w-fit flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  ${area.properties.publisher_name}
+                </span>` : ''}
               </div>
             </div>
+            ${!readOnly ? `
             <button id="btn-style-${areaId}" class="mt-1 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer shadow-sm">
               Edit Style Line
             </button>
+            ` : ''}
           </div>
         `;
 
@@ -693,6 +702,7 @@ export function MapContainer({
           group_name: a.groups?.name || a.group_name || "No Group",
           stroke_weight: a.stroke_weight ?? a.groups?.stroke_weight ?? 2,
           dash_array: a.dash_array || a.groups?.dash_array || "solid",
+          publisher_name: a.publisher_name || null,
         };
 
         if (geo.type === "GeometryCollection" && geo.geometries) {

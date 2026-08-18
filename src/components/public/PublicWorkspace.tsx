@@ -133,14 +133,20 @@ export function PublicWorkspace({
                         {groupAreas.length === 0 ? (
                           <p className="text-xs text-slate-400 p-2 text-center">Folder kosong</p>
                         ) : (
-                          groupAreas.map(area => (
-                            <AreaItem 
-                              key={area.id} 
-                              area={area} 
-                              isSelected={selectedAreaId === area.id} 
-                              onClick={() => handleAreaClick(area)} 
-                            />
-                          ))
+                          groupAreas.map(area => {
+                            const assignment = activeAssignments.find((a: any) => a.area_id === area.id);
+                            const pubName = assignment ? publishers.find(p => p.id === assignment.publisher_id)?.name : null;
+                            const mappedArea = { ...area, publisher_name: pubName };
+                            
+                            return (
+                              <AreaItem 
+                                key={area.id} 
+                                area={mappedArea} 
+                                isSelected={selectedAreaId === area.id} 
+                                onClick={() => handleAreaClick(area)} 
+                              />
+                            );
+                          })
                         )}
                       </div>
                     )}
@@ -155,7 +161,14 @@ export function PublicWorkspace({
 
       {/* Map Panel - top on mobile, right on desktop */}
       <div className="order-1 md:order-2 flex-1 relative bg-slate-100 min-h-0">
-        <MapContainer areas={areas} readOnly={true} />
+        <MapContainer 
+          areas={areas.map(a => {
+            const assignment = activeAssignments.find((assign: any) => assign.area_id === a.id);
+            const pubName = assignment ? publishers.find((p: any) => p.id === assignment.publisher_id)?.name : null;
+            return { ...a, publisher_name: pubName };
+          })} 
+          readOnly={true} 
+        />
         
         {/* Render comments drawer if area is selected */}
         {selectedAreaId && (() => {
@@ -204,6 +217,12 @@ function AreaItem({ area, isSelected, onClick }: { area: any, isSelected: boolea
           <span className={`text-xs truncate ${isSelected ? "text-indigo-500" : "text-slate-500"}`}>
             {area.name}
           </span>
+          {area.publisher_name && (
+            <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100 max-w-fit">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              {area.publisher_name}
+            </span>
+          )}
         </div>
         <MapPin className={`h-4 w-4 shrink-0 ${isSelected ? "text-indigo-500" : "text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"}`} />
       </button>

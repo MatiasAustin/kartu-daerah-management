@@ -6,8 +6,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Trash2, Edit, Phone, UserPlus } from "lucide-react";
 import { createPublisher, updatePublisher, deletePublisher } from "@/app/actions/publisherActions";
+import { assignAreaToPublisher } from "@/app/actions/assignmentActions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
-export function PublisherManager({ projects, initialPublishers }: { projects: any[], initialPublishers: any[] }) {
+export function PublisherManager({ 
+  projects, 
+  initialPublishers,
+  initialAreas = [],
+  initialGroups = [],
+  initialAssignments = []
+}: { 
+  projects: any[], 
+  initialPublishers: any[],
+  initialAreas?: any[],
+  initialGroups?: any[],
+  initialAssignments?: any[]
+}) {
   const [projectId, setProjectId] = useState(projects.length > 0 ? projects[0].id : "");
   const [name, setName] = useState("");
   const [contactInfo, setContactInfo] = useState("");
@@ -60,6 +74,45 @@ export function PublisherManager({ projects, initialPublishers }: { projects: an
     await deletePublisher(p.id, p.project_id);
     setIsDeleting(false);
     setDeleteTarget(null);
+  };
+
+  // Assignment Modal State
+  const [assigningPublisherId, setAssigningPublisherId] = useState<string | null>(null);
+  const [assigningProjectId, setAssigningProjectId] = useState<string | null>(null);
+  const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  const handleOpenAssign = (publisherId: string, pubProjectId: string) => {
+    const currentAssigned = initialAssignments.filter(a => a.publisher_id === publisherId).map(a => a.area_id);
+    setSelectedAreaIds(currentAssigned);
+    setAssigningPublisherId(publisherId);
+    setAssigningProjectId(pubProjectId);
+  };
+
+  const handleSaveAssignments = async () => {
+    if (!assigningPublisherId || !assigningProjectId) return;
+    setIsAssigning(true);
+    
+    const originallyAssigned = initialAssignments.filter(a => a.publisher_id === assigningPublisherId).map(a => a.area_id);
+    const toAssign = selectedAreaIds.filter(id => !originallyAssigned.includes(id));
+    const toUnassign = originallyAssigned.filter(id => !selectedAreaIds.includes(id));
+
+    for (const areaId of toAssign) {
+      await assignAreaToPublisher(areaId, assigningPublisherId, assigningProjectId);
+    }
+    for (const areaId of toUnassign) {
+      await assignAreaToPublisher(areaId, null, assigningProjectId);
+    }
+
+    setIsAssigning(false);
+    setAssigningPublisherId(null);
+    setAssigningProjectId(null);
+  };
+
+  const toggleAreaSelect = (areaId: string) => {
+    setSelectedAreaIds(prev => 
+      prev.includes(areaId) ? prev.filter(id => id !== areaId) : [...prev, areaId]
+    );
   };
 
   return (
@@ -175,9 +228,25 @@ export function PublisherManager({ projects, initialPublishers }: { projects: an
                            ))}
                          </select>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
-                          {p.projects?.name}
-                        </span>
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700 border border-indigo-100">
+                            {p.projects?.name}
+                          </span>
+                          {(() => {
+                            const assignedAreaIds = initialAssignments?.filter((a: any) => a.publisher_id === p.id).map(a => a.area_id) || [];
+                            if (assignedAreaIds.length === 0) return null;
+                            const assignedAreas = initialAreas?.filter(a => assignedAreaIds.includes(a.id)) || [];
+                            return (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {assignedAreas.map(area => (
+                                  <span key={area.id} className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-200">
+                                    {area.name || `Area ${area.area_number}`}
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
@@ -196,15 +265,23 @@ export function PublisherManager({ projects, initialPublishers }: { projects: an
                           <span className="text-xs text-red-500 mr-2">Delete?</span>
                           <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(null)} disabled={isDeleting} className="h-7 px-2">Cancel</Button>
                           <Button size="sm" variant="destructive" onClick={() => handleDelete(p)} disabled={isDeleting} className="h-7 px-2">
-                            {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes"}
+                            {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : "Confirm"}
                           </Button>
                         </div>
                       ) : (
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" onClick={() => handleStartEdit(p)}>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50" 
+                            onClick={() => handleOpenAssign(p.id, p.project_id)}
+                          >
+                            <UserPlus className="w-4 h-4 mr-1" /> Assign Area(s)
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500" onClick={() => handleStartEdit(p)}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => setDeleteTarget(p.id)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => setDeleteTarget(p.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
@@ -217,6 +294,76 @@ export function PublisherManager({ projects, initialPublishers }: { projects: an
           </div>
         )}
       </div>
+
+      {/* Assignment Dialog */}
+      <Dialog open={!!assigningPublisherId} onOpenChange={(open) => !open && setAssigningPublisherId(null)}>
+        <DialogContent className="sm:max-w-md font-sans">
+          <div className="flex flex-col gap-4">
+            <DialogHeader>
+              <DialogTitle>Assign Areas to {initialPublishers.find((p: any) => p.id === assigningPublisherId)?.name}</DialogTitle>
+              <DialogDescription>
+                Select the areas you want to assign to this field worker.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="max-h-[300px] overflow-y-auto space-y-4 pr-1">
+              {(() => {
+                const projGroups = initialGroups?.filter((g: any) => g.project_id === assigningProjectId) || [];
+                const projAreas = initialAreas?.filter((a: any) => a.project_id === assigningProjectId) || [];
+                
+                if (projGroups.length === 0) {
+                  return <div className="text-sm text-slate-500 text-center py-4">No groups available in this project.</div>;
+                }
+                
+                return projGroups.map((group: any) => {
+                  const groupAreas = projAreas.filter((a: any) => a.group_id === group.id);
+                  if (groupAreas.length === 0) return null;
+                  
+                  return (
+                    <div key={group.id} className="space-y-2">
+                      <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{group.name}</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {groupAreas.map((area: any) => {
+                          const isSelected = selectedAreaIds.includes(area.id);
+                          return (
+                            <button
+                              key={area.id}
+                              type="button"
+                              onClick={() => toggleAreaSelect(area.id)}
+                              className={`flex items-center gap-2 p-2 rounded border text-sm text-left transition-colors ${
+                                isSelected 
+                                  ? "border-indigo-500 bg-indigo-50 text-indigo-700" 
+                                  : "border-slate-200 bg-white text-slate-700 hover:border-indigo-300"
+                              }`}
+                            >
+                              <div className={`w-4 h-4 shrink-0 rounded flex items-center justify-center border ${
+                                isSelected ? "bg-indigo-600 border-indigo-600" : "border-slate-300"
+                              }`}>
+                                {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                              </div>
+                              <span className="truncate flex-1">{area.name || `Area ${area.area_number}`}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            
+            <DialogFooter className="mt-2 pt-4 border-t border-slate-100">
+              <Button variant="ghost" onClick={() => setAssigningPublisherId(null)} disabled={isAssigning}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveAssignments} disabled={isAssigning} className="bg-indigo-600 hover:bg-indigo-700">
+                {isAssigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Save Assignments
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

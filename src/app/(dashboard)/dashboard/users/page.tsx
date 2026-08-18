@@ -65,7 +65,10 @@ export default async function UsersPage() {
 
   // Fetch Publishers (Field Workers)
   const projectIds = projects?.map(p => p.id) || [];
-  let publishers = [];
+  let publishers: any[] = [];
+  let areas: any[] = [];
+  let activeAssignments: any[] = [];
+
   if (projectIds.length > 0) {
     const { data: pubData } = await supabase
       .from("publishers")
@@ -73,6 +76,21 @@ export default async function UsersPage() {
       .in("project_id", projectIds)
       .order("created_at", { ascending: false });
     publishers = pubData || [];
+
+    const { data: areaData } = await supabase
+      .from("areas")
+      .select("id, name, area_number, group_id, project_id")
+      .in("project_id", projectIds);
+    areas = areaData || [];
+
+    if (areas.length > 0) {
+      const { data: assignmentData } = await supabase
+        .from("area_assignments")
+        .select("*")
+        .eq("is_active", true)
+        .in("area_id", areas.map(a => a.id));
+      activeAssignments = assignmentData || [];
+    }
   }
 
   return (
@@ -114,7 +132,13 @@ export default async function UsersPage() {
         )}
       </div>
 
-      <PublisherManager projects={projects || []} initialPublishers={publishers} />
+      <PublisherManager 
+        projects={projects || []} 
+        initialPublishers={publishers}
+        initialAreas={areas}
+        initialGroups={groups || []}
+        initialAssignments={activeAssignments}
+      />
     </div>
   );
 }

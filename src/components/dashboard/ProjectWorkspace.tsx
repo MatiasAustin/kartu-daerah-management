@@ -487,7 +487,18 @@ export function ProjectWorkspace({
                       className={`flex-1 flex items-center gap-2 px-3 py-2 text-sm truncate ${selectedAreaId === area.id ? "text-indigo-700" : "text-slate-700"}`}
                     >
                       <MapPin className={`h-4 w-4 shrink-0 ${selectedAreaId === area.id ? "text-indigo-500" : "text-slate-400"}`} />
-                      <span className="truncate">{area.area_number} - {area.name}</span>
+                      <div className="flex flex-col items-start truncate">
+                        <span className="truncate">{area.area_number} - {area.name}</span>
+                        {(() => {
+                          const assignment = activeAssignments.find((a: any) => a.area_id === area.id);
+                          const pubName = assignment ? publishers.find((p: any) => p.id === assignment.publisher_id)?.name : null;
+                          return pubName ? (
+                            <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1 rounded truncate mt-0.5 max-w-full">
+                              Penyiar: {pubName}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
                     </button>
                     <Button
                       variant="ghost"
@@ -533,7 +544,11 @@ export function ProjectWorkspace({
       {/* Map Area */}
       <div className="flex-1 relative w-full h-full">
         <MapContainer
-          areas={areas}
+          areas={areas.map((a: any) => {
+            const assignment = activeAssignments.find((assign: any) => assign.area_id === a.id);
+            const pubName = assignment ? publishers.find((p: any) => p.id === assignment.publisher_id)?.name : null;
+            return { ...a, publisher_name: pubName };
+          })}
           references={references}
           onAreaCreate={handleMapAreaCreate}
           onAreaUpdate={async (areaId, geometry) => {
@@ -570,9 +585,21 @@ export function ProjectWorkspace({
                       <h3 className="text-lg font-bold text-slate-900 mb-2">{selectedArea.name}</h3>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full md:hidden" onClick={() => setSelectedAreaId(null)}>×</Button>
                     </div>
-                    <div className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-xs font-medium text-slate-700 mb-4">
-                      <div className="w-2 h-2 rounded-full mr-1.5 shrink-0" style={{ backgroundColor: group?.color || "#cbd5e1" }} />
-                      {group?.name || "Unknown Group"}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-xs font-medium text-slate-700">
+                        <div className="w-2 h-2 rounded-full mr-1.5 shrink-0" style={{ backgroundColor: group?.color || "#cbd5e1" }} />
+                        {group?.name || "Unknown Group"}
+                      </div>
+                      {(() => {
+                        const assignment = activeAssignments.find((a: any) => a.area_id === selectedArea.id);
+                        const pubName = assignment ? publishers.find((p: any) => p.id === assignment.publisher_id)?.name : null;
+                        return pubName ? (
+                          <div className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-50 text-xs font-medium text-emerald-700 border border-emerald-100">
+                            <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                            {pubName}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
 
                     <div className="space-y-4">
