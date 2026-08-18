@@ -75,12 +75,14 @@ export default async function PublicAreaPreviewPage({
   }
 
   return (
-    <div className="relative min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="relative min-h-screen bg-slate-50 flex flex-col md:flex-row print:block">
       <div className="flex-1 overflow-auto">
         <PrintAreaCard project={project} group={group} area={{ ...area, publisher_name: publisherName }} isPublicView={true} />
       </div>
-      {/* Sidebar for Comments on Desktop, Bottom Toggle on Mobile */}
-      <AreaCommentsSidebar area={area} publisherId={publisherId} publisherName={publisherName} />
+      {/* Sidebar for Comments on Desktop, Bottom Toggle on Mobile — hidden when printing */}
+      <div className="print:hidden">
+        <AreaCommentsSidebar area={area} publisherId={publisherId} publisherName={publisherName} />
+      </div>
     </div>
   );
 }
