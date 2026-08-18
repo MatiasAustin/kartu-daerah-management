@@ -18,6 +18,8 @@ export async function createPublisher(projectId: string, data: any) {
   if (error) return { error: error.message };
 
   revalidatePath(`/dashboard/projects/${projectId}/publishers`);
+  revalidatePath(`/dashboard/users`);
+  revalidatePath(`/dashboard/projects/${projectId}`);
   return { success: true };
 }
 
@@ -35,6 +37,8 @@ export async function updatePublisher(publisherId: string, projectId: string, da
   if (error) return { error: error.message };
 
   revalidatePath(`/dashboard/projects/${projectId}/publishers`);
+  revalidatePath(`/dashboard/users`);
+  revalidatePath(`/dashboard/projects/${projectId}`);
   return { success: true };
 }
 
@@ -49,5 +53,7 @@ export async function deletePublisher(publisherId: string, projectId: string) {
   if (error) return { error: error.message };
 
   revalidatePath(`/dashboard/projects/${projectId}/publishers`);
+  revalidatePath(`/dashboard/users`);
+  revalidatePath(`/dashboard/projects/${projectId}`);
   return { success: true };
 }

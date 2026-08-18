@@ -706,6 +706,8 @@ export function ProjectWorkspace({
         projectId={project.id}
         publishers={publishers}
         activeAssignments={activeAssignments}
+        areas={areas}
+        groups={groups}
       />
 
       {selectedGroupForManager && (

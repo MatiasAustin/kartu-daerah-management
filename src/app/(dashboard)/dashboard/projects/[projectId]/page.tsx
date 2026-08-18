@@ -37,18 +37,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
     .rpc("get_areas_for_project", { p_project_id: projectId });
 
   if (!rpcError && rpcAreas) {
-    // RPC succeeded — attach group color from groups array
-    areas = rpcAreas.map((a: any) => ({
-      ...a,
-      groups: { color: a.group_color || "#ef4444" },
-    }));
+    // RPC succeeded — attach group from groups array
+    areas = rpcAreas.map((a: any) => {
+      const g = groups?.find((grp: any) => grp.id === a.group_id);
+      return {
+        ...a,
+        groups: g || { color: a.group_color || "#ef4444", name: "No Group" },
+      };
+    });
     console.log("[ServerDebug] Areas via RPC:", areas.length, "first geojson:", areas[0]?.geojson?.substring?.(0, 80));
   } else {
     // RPC not available yet — fallback to regular query
     console.log("[ServerDebug] RPC failed:", rpcError?.message, "— using fallback query");
     const { data: fallbackAreas, error: areasError } = await supabase
       .from("areas")
-      .select("*, groups(color)")
+      .select("*, groups(name, color, stroke_weight, dash_array)")
       .eq("project_id", projectId);
     areas = fallbackAreas || [];
     if (areas.length > 0) {

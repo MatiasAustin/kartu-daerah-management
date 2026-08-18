@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { InviteUserForm } from "./InviteUserForm";
 import { ManagerRow } from "./ManagerRow";
+import { PublisherManager } from "./PublisherManager";
 
 export default async function UsersPage() {
   const supabase = await createClient();
@@ -62,6 +63,18 @@ export default async function UsersPage() {
     }));
   }
 
+  // Fetch Publishers (Field Workers)
+  const projectIds = projects?.map(p => p.id) || [];
+  let publishers = [];
+  if (projectIds.length > 0) {
+    const { data: pubData } = await supabase
+      .from("publishers")
+      .select("*, projects(name)")
+      .in("project_id", projectIds)
+      .order("created_at", { ascending: false });
+    publishers = pubData || [];
+  }
+
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
       <div className="mb-8">
@@ -100,6 +113,8 @@ export default async function UsersPage() {
           </div>
         )}
       </div>
+
+      <PublisherManager projects={projects || []} initialPublishers={publishers} />
     </div>
   );
 }
