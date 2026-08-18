@@ -473,7 +473,7 @@ export function MapContainer({
             id: dt.id,
             type: "line",
             source: "references-source",
-            filter: dt.filter,
+            filter: dt.filter as MapLibreTypes.FilterSpecification,
             paint
           });
         }

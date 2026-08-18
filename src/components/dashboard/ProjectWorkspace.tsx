@@ -200,6 +200,17 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
     setDeleteGroupTarget(null);
   };
 
+  const handleDeleteReference = async () => {
+    if (!deleteReferenceTarget) return;
+    setIsDeleting(true);
+    const res = await deleteProjectReference(deleteReferenceTarget.id, project.id);
+    setIsDeleting(false);
+    if (!res?.error) {
+      setReferences((prev: any[]) => prev.filter((r: any) => r.id !== deleteReferenceTarget.id));
+    }
+    setDeleteReferenceTarget(null);
+  };
+
   const refreshGroups = async () => {
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
