@@ -41,3 +41,19 @@ export async function deleteProjectReference(referenceId: string, projectId: str
   revalidatePath(`/dashboard/projects/${projectId}`);
   return { success: true };
 }
+
+export async function updateProjectReference(referenceId: string, projectId: string, updates: { name: string, color: string, weight: number, dash_array: string }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Unauthorized" };
+
+  const { error } = await supabase.from("project_references").update(updates).eq("id", referenceId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  return { success: true };
+}

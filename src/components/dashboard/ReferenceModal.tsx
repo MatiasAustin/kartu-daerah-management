@@ -5,33 +5,52 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAvailableReferenceAreas } from "@/app/actions/referenceFetchActions";
-import { addProjectReference } from "@/app/actions/referenceActions";
+import { addProjectReference, updateProjectReference } from "@/app/actions/referenceActions";
 
-export function ReferenceModal({ projectId, onClose, onSuccess }: { projectId: string, onClose: () => void, onSuccess: () => void }) {
+export function ReferenceModal({ 
+  projectId, 
+  initialData,
+  onClose, 
+  onSuccess 
+}: { 
+  projectId: string, 
+  initialData?: any,
+  onClose: () => void, 
+  onSuccess: () => void 
+}) {
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-  const [selectedAreaId, setSelectedAreaId] = useState<string>("");
-  const [name, setName] = useState("");
-  const [color, setColor] = useState("#ff0000");
-  const [weight, setWeight] = useState(3);
-  const [dashArray, setDashArray] = useState("5, 5");
+  const [selectedAreaId, setSelectedAreaId] = useState<string>(initialData?.source_area_id || "");
+  const [name, setName] = useState(initialData?.name || "");
+  const [color, setColor] = useState(initialData?.color || "#ff0000");
+  const [weight, setWeight] = useState(initialData?.weight || 3);
+  const [dashArray, setDashArray] = useState(initialData?.dash_array || "5, 5");
+
+  const isEdit = !!initialData;
 
   useEffect(() => {
-    getAvailableReferenceAreas(projectId).then(res => {
-      if (res.data) setProjects(res.data);
-    });
-  }, [projectId]);
+    if (!isEdit) {
+      getAvailableReferenceAreas(projectId).then(res => {
+        if (res.data) setProjects(res.data);
+      });
+    }
+  }, [projectId, isEdit]);
 
   const activeProject = projects.find(p => p.id === selectedProjectId);
   const availableAreas = activeProject ? activeProject.areas : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedAreaId) return;
+    if (!isEdit && !selectedAreaId) return;
 
     setLoading(true);
-    const res = await addProjectReference(projectId, selectedAreaId, name || "Reference Line", color, weight, dashArray);
+    let res;
+    if (isEdit) {
+      res = await updateProjectReference(initialData.id, projectId, { name, color, weight, dash_array: dashArray });
+    } else {
+      res = await addProjectReference(projectId, selectedAreaId, name || "Reference Line", color, weight, dashArray);
+    }
     setLoading(false);
 
     if (res.success) {
@@ -43,49 +62,53 @@ export function ReferenceModal({ projectId, onClose, onSuccess }: { projectId: s
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pt-6 font-sans">
-      <div className="space-y-3">
-        <Label className="text-slate-700">Source Project</Label>
-        <div className="relative">
-          <select 
-            required
-            value={selectedProjectId}
-            onChange={(e) => {
-              setSelectedProjectId(e.target.value);
-              setSelectedAreaId("");
-            }}
-            className="flex h-11 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <option value="">Select a project...</option>
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      {!isEdit && (
+        <>
+          <div className="space-y-3">
+            <Label className="text-slate-700">Source Project</Label>
+            <div className="relative">
+              <select 
+                required
+                value={selectedProjectId}
+                onChange={(e) => {
+                  setSelectedProjectId(e.target.value);
+                  setSelectedAreaId("");
+                }}
+                className="flex h-11 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Select a project...</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="space-y-3">
-        <Label className="text-slate-700">Source Area / Line</Label>
-        <div className="relative">
-          <select 
-            required
-            disabled={!selectedProjectId}
-            value={selectedAreaId}
-            onChange={(e) => setSelectedAreaId(e.target.value)}
-            className="flex h-11 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <option value="">Select an area...</option>
-            {availableAreas.map((a: any) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <div className="space-y-3">
+            <Label className="text-slate-700">Source Area / Line</Label>
+            <div className="relative">
+              <select 
+                required
+                disabled={!selectedProjectId}
+                value={selectedAreaId}
+                onChange={(e) => setSelectedAreaId(e.target.value)}
+                className="flex h-11 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Select an area...</option>
+                {availableAreas.map((a: any) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       <div className="space-y-3">
         <Label className="text-slate-700">Reference Name</Label>
@@ -130,7 +153,7 @@ export function ReferenceModal({ projectId, onClose, onSuccess }: { projectId: s
 
       <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
         <Button type="button" variant="outline" onClick={onClose} className="rounded-lg">Cancel</Button>
-        <Button type="submit" disabled={loading} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">{loading ? "Adding..." : "Add Reference"}</Button>
+        <Button type="submit" disabled={loading} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">{loading ? "Saving..." : isEdit ? "Save Changes" : "Add Reference"}</Button>
       </div>
     </form>
   );

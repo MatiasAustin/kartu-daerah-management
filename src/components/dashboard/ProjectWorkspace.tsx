@@ -5,7 +5,7 @@ import { MapContainer, resolveGeometry } from "@/components/map/MapContainer";
 import { useMapStore } from "@/lib/store/mapStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, ChevronRight, MapPin, Users, Share2, ListFilter, Trash2 } from "lucide-react";
+import { Plus, Search, ChevronRight, MapPin, Users, Share2, ListFilter, Trash2, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from "@/components/ui/sheet";
 import {
@@ -54,6 +54,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
   // Modal States
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isReferenceModalOpen, setIsReferenceModalOpen] = useState(false);
+  const [editReferenceTarget, setEditReferenceTarget] = useState<any>(null);
 
   const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [areaFormData, setAreaFormData] = useState<any>(null);
@@ -211,6 +212,40 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
     setDeleteReferenceTarget(null);
   };
 
+  const handleReferenceClick = (ref: any) => {
+    setIsMobileListOpen(false);
+    const geo = resolveGeometry(ref);
+    if (geo) {
+      let minX = 180, maxX = -180, minY = 90, maxY = -90;
+      let hasValidCoords = false;
+      const extract = (coords: any[]) => {
+        if (typeof coords[0] === 'number') {
+          hasValidCoords = true;
+          if (coords[0] < minX) minX = coords[0];
+          if (coords[0] > maxX) maxX = coords[0];
+          if (coords[1] < minY) minY = coords[1];
+          if (coords[1] > maxY) maxY = coords[1];
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extract);
+        }
+      };
+      
+      const extractFromGeometry = (geometry: any) => {
+        if (geometry.type === 'GeometryCollection') {
+          geometry.geometries.forEach(extractFromGeometry);
+        } else if (geometry.coordinates) {
+          extract(geometry.coordinates);
+        }
+      };
+      
+      extractFromGeometry(geo);
+
+      if (hasValidCoords && minX < maxX && minY < maxY) {
+        fitBounds([[minX, minY], [maxX, maxY]]);
+      }
+    }
+  };
+
   const refreshGroups = async () => {
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
@@ -334,7 +369,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
           <div>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Reference Lines</h3>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setIsReferenceModalOpen(true)}>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setEditReferenceTarget(null); setIsReferenceModalOpen(true); }}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -343,19 +378,41 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
                 <p className="text-sm text-slate-400 py-1 px-3">No references added.</p>
               ) : (
                 references.map((ref: any) => (
-                  <div key={ref.id} className="flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors text-slate-600 hover:bg-slate-50 group/ref">
-                    <div className="flex items-center gap-2 flex-1 truncate">
+                  <div key={ref.id} className="flex items-center justify-between rounded-md transition-colors group/ref border border-transparent hover:bg-slate-50">
+                    <button
+                      onClick={() => handleReferenceClick(ref)}
+                      className="flex-1 flex items-center gap-2 px-3 py-2 text-sm truncate text-slate-700 hover:text-indigo-700"
+                    >
                       <div className="w-3 h-0.5 shrink-0" style={{ backgroundColor: ref.color }} />
                       <span className="truncate">{ref.name}</span>
+                    </button>
+                    <div className="flex items-center md:opacity-0 group-hover/ref:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 mr-1"
+                        title="Edit Reference"
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setEditReferenceTarget(ref);
+                          setIsReferenceModalOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-slate-400 hover:text-indigo-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 mr-1"
+                        title="Delete Reference"
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setDeleteReferenceTarget(ref); 
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 md:opacity-0 group-hover/ref:opacity-100 transition-opacity"
-                      onClick={() => setDeleteReferenceTarget(ref)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
-                    </Button>
                   </div>
                 ))
               )}
@@ -669,21 +726,30 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
       </AlertDialog>
 
       {/* Reference Line Modal */}
-      <Sheet open={isReferenceModalOpen} onOpenChange={setIsReferenceModalOpen}>
+      <Sheet 
+        open={isReferenceModalOpen} 
+        onOpenChange={(o) => {
+          setIsReferenceModalOpen(o);
+          if (!o) setEditReferenceTarget(null);
+        }}
+      >
         <SheetContent className="font-sans sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Add Reference Line</SheetTitle>
+            <SheetTitle>{editReferenceTarget ? "Edit Reference Line" : "Add Reference Line"}</SheetTitle>
             <SheetDescription>
-              Import a boundary from another project as a guide.
+              {editReferenceTarget ? "Update the reference line styling." : "Import a boundary from another project as a guide."}
             </SheetDescription>
           </SheetHeader>
           <ReferenceModal 
             projectId={project.id} 
-            onClose={() => setIsReferenceModalOpen(false)} 
+            initialData={editReferenceTarget}
+            onClose={() => {
+              setIsReferenceModalOpen(false);
+              setEditReferenceTarget(null);
+            }} 
             onSuccess={() => {
               setIsReferenceModalOpen(false);
-              // Instead of hard reload, in a real app we'd fetch the new reference
-              // For simplicity, we just reload
+              setEditReferenceTarget(null);
               window.location.reload();
             }} 
           />
