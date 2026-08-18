@@ -34,6 +34,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
   const [areas, setAreas] = useState(initialAreas);
   const [groups, setGroups] = useState(initialGroups);
   const [references, setReferences] = useState(initialReferences || []);
+  const [originalReferences, setOriginalReferences] = useState<any[]>([]);
   const [activeGroupFilter, setActiveGroupFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -394,6 +395,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
                         title="Edit Reference"
                         onClick={(e) => { 
                           e.stopPropagation(); 
+                          setOriginalReferences([...references]);
                           setEditReferenceTarget(ref);
                           setIsReferenceModalOpen(true);
                         }}
@@ -729,12 +731,17 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
       <Sheet 
         open={isReferenceModalOpen} 
         onOpenChange={(o) => {
-          setIsReferenceModalOpen(o);
-          if (!o) setEditReferenceTarget(null);
+          if (!o) {
+            if (editReferenceTarget) setReferences(originalReferences);
+            setIsReferenceModalOpen(false);
+            setEditReferenceTarget(null);
+          } else {
+            setIsReferenceModalOpen(true);
+          }
         }}
       >
-        <SheetContent className="font-sans sm:max-w-md">
-          <SheetHeader>
+        <SheetContent className="font-sans sm:max-w-md p-0">
+          <SheetHeader className="px-6 pt-6 pb-2">
             <SheetTitle>{editReferenceTarget ? "Edit Reference Line" : "Add Reference Line"}</SheetTitle>
             <SheetDescription>
               {editReferenceTarget ? "Update the reference line styling." : "Import a boundary from another project as a guide."}
@@ -743,14 +750,31 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
           <ReferenceModal 
             projectId={project.id} 
             initialData={editReferenceTarget}
+            onPreviewChange={(updates) => {
+              if (updates.id) {
+                setReferences((prev: any[]) => prev.map((r: any) => r.id === updates.id ? { ...r, ...updates } : r));
+              }
+            }}
             onClose={() => {
+              if (editReferenceTarget) setReferences(originalReferences);
               setIsReferenceModalOpen(false);
               setEditReferenceTarget(null);
             }} 
-            onSuccess={() => {
+            onSuccess={async (updatedData) => {
+              if (updatedData) {
+                setReferences((prev: any[]) => prev.map((r: any) => r.id === updatedData.id ? { ...r, ...updatedData } : r));
+              } else {
+                // Fetch newly added references dynamically
+                const { createClient } = await import("@/lib/supabase/client");
+                const supabase = createClient();
+                const { data } = await supabase.from('project_references').select(`
+                  id, name, color, weight, dash_array, created_at, source_area_id,
+                  areas:source_area_id ( geometry, geojson )
+                `).eq('project_id', project.id);
+                if (data) setReferences(data);
+              }
               setIsReferenceModalOpen(false);
               setEditReferenceTarget(null);
-              window.location.reload();
             }} 
           />
         </SheetContent>

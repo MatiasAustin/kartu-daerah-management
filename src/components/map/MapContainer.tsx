@@ -453,29 +453,54 @@ export function MapContainer({
         });
       }
 
-      const dashTypes = [
-        { id: "ref-solid", filter: ["==", ["get", "dash_array"], ""], dasharray: undefined },
-        { id: "ref-dashed", filter: ["==", ["get", "dash_array"], "5, 5"], dasharray: [5, 5] },
-        { id: "ref-long-dashed", filter: ["==", ["get", "dash_array"], "10, 5"], dasharray: [10, 5] },
-        { id: "ref-dotted", filter: ["==", ["get", "dash_array"], "2, 4"], dasharray: [2, 4] },
-        { id: "ref-dash-dot", filter: ["==", ["get", "dash_array"], "15, 5, 5, 5"], dasharray: [15, 5, 5, 5] },
-      ];
+      // First, remove old preset layers if they exist
+      const oldPresets = ["ref-solid", "ref-dashed", "ref-long-dashed", "ref-dotted", "ref-dash-dot"];
+      oldPresets.forEach(id => {
+        if (m.getLayer(id)) m.removeLayer(id);
+      });
 
-      dashTypes.forEach(dt => {
-        if (!m.getLayer(dt.id)) {
-          const paint: any = {
-            "line-color": ["get", "color"],
-            "line-width": ["get", "weight"],
+      // Maintain a layer for each reference to support dynamic dash arrays
+      references.forEach(ref => {
+        const layerId = `ref-layer-${ref.id}`;
+        
+        let parsedDash: number[] | undefined;
+        if (ref.dash_array && ref.dash_array.trim() !== "") {
+          const parts = ref.dash_array.split(',').map((s: string) => parseFloat(s.trim())).filter((n: number) => !isNaN(n));
+          if (parts.length > 0) parsedDash = parts;
+        }
+
+        if (!m.getLayer(layerId)) {
+          const paintProps: any = {
+            "line-color": ref.color || "#000000",
+            "line-width": ref.weight || 2,
           };
-          if (dt.dasharray) paint["line-dasharray"] = dt.dasharray;
-          
+          if (parsedDash) paintProps["line-dasharray"] = parsedDash;
+
           m.addLayer({
-            id: dt.id,
+            id: layerId,
             type: "line",
             source: "references-source",
-            filter: dt.filter as MapLibreTypes.FilterSpecification,
-            paint
+            filter: ["==", ["get", "id"], ref.id],
+            paint: paintProps
           });
+        } else {
+          // Update properties if layer exists (for realtime preview)
+          m.setPaintProperty(layerId, "line-color", ref.color || "#000000");
+          m.setPaintProperty(layerId, "line-width", ref.weight || 2);
+          if (parsedDash) {
+            m.setPaintProperty(layerId, "line-dasharray", parsedDash);
+          } else {
+            // MapLibre requires setting to something valid or we need a trick
+            m.setPaintProperty(layerId, "line-dasharray", [100000, 0]); 
+          }
+        }
+      });
+
+      // Cleanup layers for deleted references
+      const currentRefIds = new Set(references.map(r => `ref-layer-${r.id}`));
+      m.getStyle().layers?.forEach(layer => {
+        if (layer.id.startsWith('ref-layer-') && !currentRefIds.has(layer.id)) {
+          m.removeLayer(layer.id);
         }
       });
 

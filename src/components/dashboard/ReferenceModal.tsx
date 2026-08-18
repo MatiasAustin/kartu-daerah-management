@@ -11,12 +11,14 @@ export function ReferenceModal({
   projectId, 
   initialData,
   onClose, 
-  onSuccess 
+  onSuccess,
+  onPreviewChange
 }: { 
   projectId: string, 
   initialData?: any,
   onClose: () => void, 
-  onSuccess: () => void 
+  onSuccess: (updatedData?: any) => void,
+  onPreviewChange?: (updates: any) => void
 }) {
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
@@ -25,9 +27,23 @@ export function ReferenceModal({
   const [name, setName] = useState(initialData?.name || "");
   const [color, setColor] = useState(initialData?.color || "#ff0000");
   const [weight, setWeight] = useState(initialData?.weight || 3);
-  const [dashArray, setDashArray] = useState(initialData?.dash_array || "5, 5");
+  
+  // Parse initial dash array
+  let initDash = 0;
+  let initGap = 0;
+  if (initialData?.dash_array) {
+    const parts = initialData.dash_array.split(',').map((s: string) => parseFloat(s.trim()));
+    if (parts.length >= 2) {
+      initDash = parts[0];
+      initGap = parts[1];
+    }
+  }
+
+  const [dashLength, setDashLength] = useState(initDash);
+  const [gapLength, setGapLength] = useState(initGap);
 
   const isEdit = !!initialData;
+  const dashArray = gapLength > 0 ? `${dashLength || 1}, ${gapLength}` : "";
 
   useEffect(() => {
     if (!isEdit) {
@@ -36,6 +52,12 @@ export function ReferenceModal({
       });
     }
   }, [projectId, isEdit]);
+
+  useEffect(() => {
+    if (onPreviewChange) {
+      onPreviewChange({ id: initialData?.id, color, weight, dash_array: dashArray });
+    }
+  }, [color, weight, dashLength, gapLength, onPreviewChange, dashArray, initialData?.id]);
 
   const activeProject = projects.find(p => p.id === selectedProjectId);
   const availableAreas = activeProject ? activeProject.areas : [];
@@ -54,18 +76,18 @@ export function ReferenceModal({
     setLoading(false);
 
     if (res.success) {
-      onSuccess();
+      onSuccess(isEdit ? { ...initialData, name, color, weight, dash_array: dashArray } : undefined);
     } else {
       alert(res.error);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 pt-6 font-sans">
+    <form onSubmit={handleSubmit} className="space-y-6 px-4 pb-4 pt-2 font-sans">
       {!isEdit && (
         <>
-          <div className="space-y-3">
-            <Label className="text-slate-700">Source Project</Label>
+          <div className="space-y-2">
+            <Label className="text-slate-700 font-sans">Source Project</Label>
             <div className="relative">
               <select 
                 required
@@ -74,7 +96,7 @@ export function ReferenceModal({
                   setSelectedProjectId(e.target.value);
                   setSelectedAreaId("");
                 }}
-                className="flex h-11 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 font-sans"
               >
                 <option value="">Select a project...</option>
                 {projects.map(p => (
@@ -87,15 +109,15 @@ export function ReferenceModal({
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-slate-700">Source Area / Line</Label>
+          <div className="space-y-2">
+            <Label className="text-slate-700 font-sans">Source Area / Line</Label>
             <div className="relative">
               <select 
                 required
                 disabled={!selectedProjectId}
                 value={selectedAreaId}
                 onChange={(e) => setSelectedAreaId(e.target.value)}
-                className="flex h-11 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 font-sans"
               >
                 <option value="">Select an area...</option>
                 {availableAreas.map((a: any) => (
@@ -110,14 +132,14 @@ export function ReferenceModal({
         </>
       )}
 
-      <div className="space-y-3">
-        <Label className="text-slate-700">Reference Name</Label>
-        <Input required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Batas Provinsi" className="h-11 rounded-lg" />
+      <div className="space-y-2">
+        <Label className="text-slate-700 font-sans">Reference Name</Label>
+        <Input required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Batas Provinsi" className="h-11 rounded-lg font-sans" />
       </div>
 
       <div className="grid grid-cols-2 gap-5">
-        <div className="space-y-3">
-          <Label className="text-slate-700">Color</Label>
+        <div className="space-y-2">
+          <Label className="text-slate-700 font-sans">Color</Label>
           <div className="flex items-center gap-3">
             <div className="h-11 w-full rounded-lg border border-slate-200 shadow-sm overflow-hidden flex-1 relative">
                <input type="color" value={color} onChange={e => setColor(e.target.value)} className="absolute inset-[-10px] w-[calc(100%+20px)] h-[calc(100%+20px)] cursor-pointer" />
@@ -125,35 +147,79 @@ export function ReferenceModal({
             <span className="text-xs text-slate-500 font-mono w-16 uppercase">{color}</span>
           </div>
         </div>
-        <div className="space-y-3">
-          <Label className="text-slate-700">Line Weight ({weight}px)</Label>
-          <Input type="number" min="1" max="10" value={weight} onChange={e => setWeight(parseInt(e.target.value))} className="h-11 rounded-lg" />
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <Label className="text-slate-700">Dash Style</Label>
-        <div className="relative">
-          <select 
-            value={dashArray}
-            onChange={(e) => setDashArray(e.target.value)}
-            className="flex h-11 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <option value="">Solid (No dash)</option>
-            <option value="5, 5">Dashed (5, 5)</option>
-            <option value="10, 5">Long Dashed (10, 5)</option>
-            <option value="2, 4">Dotted (2, 4)</option>
-            <option value="15, 5, 5, 5">Dash-Dot (15, 5, 5, 5)</option>
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        <div className="space-y-2">
+          <Label className="text-slate-700 font-sans flex justify-between">
+            <span>Line Weight</span>
+            <span className="text-indigo-600 font-medium">{weight}px</span>
+          </Label>
+          <div className="h-11 flex items-center">
+            <input 
+              type="range" 
+              min="1" 
+              max="15" 
+              value={weight} 
+              onChange={e => setWeight(parseInt(e.target.value))} 
+              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
+            />
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
-        <Button type="button" variant="outline" onClick={onClose} className="rounded-lg">Cancel</Button>
-        <Button type="submit" disabled={loading} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">{loading ? "Saving..." : isEdit ? "Save Changes" : "Add Reference"}</Button>
+      <div className="space-y-4">
+        <Label className="text-slate-700 font-sans">Dash Style</Label>
+        
+        <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div className="space-y-3">
+            <Label className="text-slate-600 font-sans text-xs flex justify-between">
+              <span>Dash Length (Stroke)</span>
+              <span className="text-indigo-600 font-medium">{gapLength === 0 ? "Solid" : dashLength}</span>
+            </Label>
+            <input 
+              type="range" 
+              min="1" 
+              max="30" 
+              value={dashLength} 
+              disabled={gapLength === 0}
+              onChange={e => setDashLength(parseInt(e.target.value))} 
+              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed" 
+            />
+          </div>
+          <div className="space-y-3">
+            <Label className="text-slate-600 font-sans text-xs flex justify-between">
+              <span>Gap Length (Spacing)</span>
+              <span className="text-indigo-600 font-medium">{gapLength === 0 ? "0 (Solid)" : gapLength}</span>
+            </Label>
+            <input 
+              type="range" 
+              min="0" 
+              max="30" 
+              value={gapLength} 
+              onChange={e => setGapLength(parseInt(e.target.value))} 
+              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
+            />
+          </div>
+          
+          <div className="pt-2">
+             <div className="h-6 w-full border border-slate-200 rounded bg-white overflow-hidden flex items-center justify-center">
+                <svg width="100%" height="4" className="block">
+                  <line 
+                    x1="0" 
+                    y1="2" 
+                    x2="100%" 
+                    y2="2" 
+                    stroke={color} 
+                    strokeWidth={weight > 4 ? 4 : weight} 
+                    strokeDasharray={gapLength > 0 ? `${dashLength}, ${gapLength}` : "none"} 
+                  />
+                </svg>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-6 mt-6">
+        <Button type="button" variant="outline" onClick={onClose} className="rounded-lg font-sans">Cancel</Button>
+        <Button type="submit" disabled={loading} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-sans">{loading ? "Saving..." : isEdit ? "Save Changes" : "Add Reference"}</Button>
       </div>
     </form>
   );
