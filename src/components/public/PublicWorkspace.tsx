@@ -356,7 +356,7 @@ function AreaItem({ area, isSelected, onClick, onOpenComments }: { area: any, is
               className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded hover:bg-indigo-50 transition-colors"
               title="Cetak Area"
             >
-              <Printer className="w-3 h-3" /> Print
+              <Printer className="w-3 h-3" /> View/Print
             </button>
 
             <a
