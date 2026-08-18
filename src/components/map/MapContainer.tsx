@@ -157,6 +157,7 @@ export function resolveGeometry(area: any): any | null {
 
 interface MapContainerProps {
   areas: any[];
+  references?: any[];
   onAreaCreate?: (feature: any) => void;
   onAreaUpdate?: (areaId: string, geometry: any) => void;
   onAreaDelete?: (featureId: string) => void;
@@ -166,6 +167,7 @@ interface MapContainerProps {
 
 export function MapContainer({
   areas,
+  references = [],
   onAreaCreate,
   onAreaUpdate,
   onAreaDelete,
@@ -443,6 +445,40 @@ export function MapContainer({
         });
       }
 
+      // ── References source + layer ─────────────────────────────────────
+      if (!m.getSource("references-source")) {
+        m.addSource("references-source", { 
+          type: "geojson", 
+          data: { type: "FeatureCollection", features: [] }
+        });
+      }
+
+      const dashTypes = [
+        { id: "ref-solid", filter: ["==", ["get", "dash_array"], ""], dasharray: undefined },
+        { id: "ref-dashed", filter: ["==", ["get", "dash_array"], "5, 5"], dasharray: [5, 5] },
+        { id: "ref-long-dashed", filter: ["==", ["get", "dash_array"], "10, 5"], dasharray: [10, 5] },
+        { id: "ref-dotted", filter: ["==", ["get", "dash_array"], "2, 4"], dasharray: [2, 4] },
+        { id: "ref-dash-dot", filter: ["==", ["get", "dash_array"], "15, 5, 5, 5"], dasharray: [15, 5, 5, 5] },
+      ];
+
+      dashTypes.forEach(dt => {
+        if (!m.getLayer(dt.id)) {
+          const paint: any = {
+            "line-color": ["get", "color"],
+            "line-width": ["get", "weight"],
+          };
+          if (dt.dasharray) paint["line-dasharray"] = dt.dasharray;
+          
+          m.addLayer({
+            id: dt.id,
+            type: "line",
+            source: "references-source",
+            filter: dt.filter,
+            paint
+          });
+        }
+      });
+
       // ── Edit vertex layers ────────────────────────────────────────────
       if (!m.getSource("edit-verts")) {
         m.addSource("edit-verts", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -646,6 +682,44 @@ export function MapContainer({
       console.log("[MapDebug] SOURCE IS UNDEFINED! Cannot set data.");
     }
   }, [areas, mapLoaded, styleVersion]); // Sync data when style/layers are reloaded
+
+  // ── Sync References Data ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapLoaded || !map.current || !references) return;
+
+    const validFeatures: any[] = [];
+    for (const ref of references) {
+      let geo = resolveGeometry(ref); // uses the same geometry parser since it has .geometry
+      if (geo) {
+        // if it's GeometryCollection, extract them
+        if (geo.type === "GeometryCollection" && geo.geometries) {
+          geo.geometries.forEach((g: any, i: number) => {
+            validFeatures.push({
+              type: "Feature",
+              id: `${ref.id}-${i}`,
+              geometry: g,
+              properties: { ...ref, geometry: undefined }
+            });
+          });
+        } else {
+          validFeatures.push({
+            type: "Feature",
+            id: ref.id,
+            geometry: geo,
+            properties: { ...ref, geometry: undefined }
+          });
+        }
+      }
+    }
+
+    const source = map.current.getSource("references-source") as MapLibreTypes.GeoJSONSource;
+    if (source) {
+      source.setData({
+        type: "FeatureCollection",
+        features: validFeatures,
+      } as any);
+    }
+  }, [references, mapLoaded, styleVersion]);
 
   // ── Sync fill/line style live ─────────────────────────────────────────────
   useEffect(() => {

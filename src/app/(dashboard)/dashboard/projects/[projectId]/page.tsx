@@ -61,9 +61,26 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
     }
   }
 
+  // Fetch Project References
+  const { data: references } = await supabase
+    .from("project_references")
+    .select("id, name, color, weight, dash_array, source_area_id, areas!inner(geometry, geojson)")
+    .eq("project_id", projectId);
+
+  // Parse reference geometries
+  const parsedReferences = (references || []).map((ref: any) => ({
+    ...ref,
+    geometry: ref.areas?.geojson || ref.areas?.geometry
+  }));
+
   return (
     <div className="flex h-full w-full">
-      <ProjectWorkspace project={project} initialGroups={groups || []} initialAreas={areas || []} />
+      <ProjectWorkspace 
+        project={project} 
+        initialGroups={groups || []} 
+        initialAreas={areas || []} 
+        initialReferences={parsedReferences}
+      />
     </div>
   );
 }
