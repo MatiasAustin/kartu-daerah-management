@@ -14,6 +14,8 @@ export async function createGroup(projectId: string, data: any) {
     name: data.name,
     description: data.description,
     color: data.color || "#ef4444",
+    stroke_weight: data.stroke_weight ?? 2,
+    dash_array: data.dash_array || null,
   }).select().single();
 
   if (error) {
@@ -34,6 +36,8 @@ export async function updateGroup(groupId: string, projectId: string, data: any)
       name: data.name,
       description: data.description,
       color: data.color,
+      stroke_weight: data.stroke_weight ?? 2,
+      dash_array: data.dash_array || null,
     })
     .eq("id", groupId);
 

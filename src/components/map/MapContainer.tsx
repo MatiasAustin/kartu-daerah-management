@@ -432,10 +432,9 @@ export function MapContainer({
         m.addLayer({ id: "areas-fill", type: "fill", source: "areas-source",
           paint: { "fill-color": ["get", "color"], "fill-opacity": 0.3 } });
       }
-      if (!m.getLayer("areas-outline")) {
-        m.addLayer({ id: "areas-outline", type: "line", source: "areas-source",
-          paint: { "line-color": ["get", "color"], "line-width": 2 } });
-      }
+      
+      // Dynamic area-outline layers are created in the areas sync useEffect
+      
       if (!m.getLayer("areas-label")) {
         m.addLayer({
           id: "areas-label", type: "symbol", source: "areas-source",
@@ -455,8 +454,84 @@ export function MapContainer({
 
       // Note: Reference layers are now maintained dynamically in a separate useEffect
 
+      const showAreaPopup = (e: any) => {
+        if (toolModeRef.current !== "select") return;
+        if (!e.features?.length) return;
+        
+        const area = e.features[0];
+        const areaId = area.id as string || area.properties.id;
+        
+        // Don't recreate if it's the exact same area popup already showing
+        const existingPopup = document.querySelector(`.glassmorphism-popup[data-area-id="${areaId}"]`);
+        if (existingPopup) return;
 
+        // Close any existing popups automatically
+        const popups = document.getElementsByClassName("mapboxgl-popup");
+        for (let i = 0; i < popups.length; i++) popups[i].remove();
+        
+        const popups2 = document.getElementsByClassName("maplibregl-popup");
+        for (let i = 0; i < popups2.length; i++) popups2[i].remove();
 
+        const popupContent = document.createElement("div");
+        popupContent.className = "p-1 font-sans min-w-[200px]";
+        popupContent.innerHTML = `
+          <div class="flex flex-col gap-2.5">
+            <div>
+              <h3 class="font-semibold text-slate-800 text-lg m-0 leading-tight">${area.properties.name || "Unknown Area"}</h3>
+              <div class="mt-1.5 px-2.5 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full w-fit">
+                ${area.properties.group_name || "No Group"}
+              </div>
+            </div>
+            <button id="btn-style-${areaId}" class="mt-1 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer shadow-sm">
+              Edit Style Line
+            </button>
+          </div>
+        `;
+
+        const popup = new maplibregl.Popup({
+          closeButton: true,
+          closeOnClick: false,
+          className: "glassmorphism-popup"
+        })
+          .setLngLat(e.lngLat)
+          .setDOMContent(popupContent)
+          .addTo(m);
+          
+        // Tag the popup element to avoid recreating it when hovering the same area
+        popup.getElement().setAttribute("data-area-id", areaId);
+
+        // Add event listener to the button
+        const btn = popupContent.querySelector(`#btn-style-${areaId}`);
+        if (btn) {
+          btn.addEventListener("click", () => {
+            // Close popup and open style modal
+            popup.remove();
+            window.dispatchEvent(new CustomEvent("open-area-style-modal", { detail: { areaId } }));
+          });
+        }
+      };
+
+      // ── Area selection click ──────────────────────────────────────────
+      m.on("click", "areas-fill", (e) => {
+        if (toolModeRef.current !== "select") return;
+        if (e.features?.length) {
+          const areaId = e.features[0].id as string || e.features[0].properties.id;
+          setSelectedAreaId(areaId);
+          showAreaPopup(e);
+        }
+      });
+      
+      // ── Area hover ────────────────────────────────────────────────────
+      m.on("mouseenter", "areas-fill", (e) => {
+        if (toolModeRef.current === "select") {
+          m.getCanvas().style.cursor = "pointer";
+          showAreaPopup(e);
+        }
+      });
+      
+      m.on("mouseleave", "areas-fill", () => {
+        m.getCanvas().style.cursor = "";
+      });
 
       // ── Edit vertex layers ────────────────────────────────────────────
       if (!m.getSource("edit-verts")) {
@@ -481,64 +556,6 @@ export function MapContainer({
       setMap(m);
 
       addAreaLayers(m);
-
-      // ── Area selection click ──────────────────────────────────────────
-      m.on("click", "areas-fill", (e) => {
-        if (toolModeRef.current !== "select") return;
-        if (e.features?.length) {
-          const area = e.features[0];
-          const areaId = area.id as string || area.properties.id;
-          setSelectedAreaId(areaId);
-
-          const popupContent = document.createElement("div");
-          popupContent.className = "p-1 font-sans min-w-[200px]";
-          popupContent.innerHTML = `
-            <div class="flex flex-col gap-2.5">
-              <div>
-                <h3 class="font-semibold text-slate-800 text-lg m-0 leading-tight">${area.properties.name || "Unknown Area"}</h3>
-                <div class="mt-1.5 px-2.5 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full w-fit">
-                  ${area.properties.group_name || "No Group"}
-                </div>
-              </div>
-              <button id="btn-style-${areaId}" class="mt-1 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer shadow-sm">
-                Edit Style Line
-              </button>
-            </div>
-          `;
-
-          // Close any existing popups automatically
-          const popups = document.getElementsByClassName("mapboxgl-popup");
-          for (let i = 0; i < popups.length; i++) popups[i].remove();
-          
-          const popups2 = document.getElementsByClassName("maplibregl-popup");
-          for (let i = 0; i < popups2.length; i++) popups2[i].remove();
-
-          const popup = new maplibregl.Popup({
-            closeButton: true,
-            closeOnClick: false,
-            className: "glassmorphism-popup"
-          })
-            .setLngLat(e.lngLat)
-            .setDOMContent(popupContent)
-            .addTo(m);
-
-          // Add event listener to the button
-          const btn = popupContent.querySelector(`#btn-style-${areaId}`);
-          if (btn) {
-            btn.addEventListener("click", () => {
-              // Close popup and open style modal
-              popup.remove();
-              window.dispatchEvent(new CustomEvent("open-area-style-modal", { detail: { areaId } }));
-            });
-          }
-        }
-      });
-      m.on("mouseenter", "areas-fill", () => {
-        if (toolModeRef.current === "select") m.getCanvas().style.cursor = "pointer";
-      });
-      m.on("mouseleave", "areas-fill", () => {
-        if (toolModeRef.current === "select") m.getCanvas().style.cursor = "";
-      });
 
       // ── Map move: redraw canvas pen ───────────────────────────────────
       m.on("move", () => {
@@ -672,8 +689,10 @@ export function MapContainer({
           id: a.id,
           name: a.name,
           area_number: a.area_number,
-          color: a.groups?.color || a.group_color || "#ef4444",
+          color: a.color || a.groups?.color || a.group_color || "#ef4444",
           group_name: a.groups?.name || a.group_name || "No Group",
+          stroke_weight: a.stroke_weight ?? a.groups?.stroke_weight ?? 2,
+          dash_array: a.dash_array || a.groups?.dash_array || "solid",
         };
 
         if (geo.type === "GeometryCollection" && geo.geometries) {
@@ -707,6 +726,43 @@ export function MapContainer({
     } else {
       console.log("[MapDebug] SOURCE IS UNDEFINED! Cannot set data.");
     }
+
+    // --- Dynamic Area Outlines based on dash_array ---
+    const dashGroups = new Set(areas.map(a => a.dash_array || a.groups?.dash_array || "solid"));
+    
+    // First, remove old generated dash layers
+    map.current.getStyle()?.layers?.forEach(layer => {
+      if (layer.id.startsWith("areas-outline-")) {
+        map.current?.removeLayer(layer.id);
+      }
+    });
+    if (map.current.getLayer("areas-outline")) {
+        map.current.removeLayer("areas-outline");
+    }
+
+    dashGroups.forEach(dash => {
+      const layerId = dash === "solid" ? "areas-outline-solid" : `areas-outline-${dash.replace(/,/g, "-")}`;
+      
+      const paintProps: any = {
+        "line-color": ["get", "color"],
+        "line-width": ["get", "stroke_weight"]
+      };
+      
+      if (dash !== "solid") {
+         paintProps["line-dasharray"] = dash.split(',').map((s: string) => parseFloat(s.trim())).filter((n: number) => !isNaN(n));
+      }
+
+      if (!map.current?.getLayer(layerId)) {
+        map.current?.addLayer({
+          id: layerId,
+          type: "line",
+          source: "areas-source",
+          filter: ["==", ["get", "dash_array"], dash],
+          paint: paintProps
+        }, "areas-label"); // Ensure it stays below labels
+      }
+    });
+
   }, [areas, mapLoaded, styleVersion]); // Sync data when style/layers are reloaded
 
   // ── Sync References Data ───────────────────────────────────────────────────

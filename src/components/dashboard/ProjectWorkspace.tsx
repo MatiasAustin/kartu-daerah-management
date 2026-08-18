@@ -24,6 +24,7 @@ import { GroupModal } from "./GroupModal";
 import { AreaModal } from "./AreaModal";
 import { ManagerModal } from "./ManagerModal";
 import { ShareModal } from "./ShareModal";
+import { AreaStyleModal } from "./AreaStyleModal";
 import { ImportKmlButton } from "./ImportKmlButton";
 import { deleteArea, updateArea } from "@/app/actions/areaActions";
 import { deleteGroup } from "@/app/actions/groupActions";
@@ -56,6 +57,11 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isReferenceModalOpen, setIsReferenceModalOpen] = useState(false);
   const [editReferenceTarget, setEditReferenceTarget] = useState<any>(null);
+  const [deleteReferenceTarget, setDeleteReferenceTarget] = useState<any>(null);
+
+  // Styling state
+  const [isAreaStyleModalOpen, setIsAreaStyleModalOpen] = useState(false);
+  const [styleAreaTarget, setStyleAreaTarget] = useState<any>(null);
 
   const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [areaFormData, setAreaFormData] = useState<any>(null);
@@ -67,12 +73,22 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
   const [shareTarget, setShareTarget] = useState<{ id?: string, name: string, isProject: boolean } | null>(null);
 
   const [isMobileListOpen, setIsMobileListOpen] = useState(false);
-
-  // Delete confirmation state
   const [deleteAreaTarget, setDeleteAreaTarget] = useState<any>(null);
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<any>(null);
-  const [deleteReferenceTarget, setDeleteReferenceTarget] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const handleOpenAreaStyleModal = (e: any) => {
+      const areaId = e.detail.areaId;
+      const targetArea = areas.find((a: any) => a.id === areaId);
+      if (targetArea) {
+        setStyleAreaTarget(targetArea);
+        setIsAreaStyleModalOpen(true);
+      }
+    };
+    window.addEventListener("open-area-style-modal", handleOpenAreaStyleModal);
+    return () => window.removeEventListener("open-area-style-modal", handleOpenAreaStyleModal);
+  }, [areas]);
 
   const handleAreaClick = (area: any) => {
     setSelectedAreaId(area.id);
@@ -255,7 +271,17 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
       .select("*")
       .eq("project_id", project.id)
       .order("sort_order");
-    if (data) setGroups(data);
+    if (data) {
+      setGroups(data);
+      // Also update the nested group objects inside areas so styling applies immediately
+      setAreas((prev: any[]) => prev.map((a: any) => {
+        const updatedGroup = data.find((g: any) => g.id === a.group_id);
+        if (updatedGroup) {
+          return { ...a, groups: updatedGroup };
+        }
+        return a;
+      }));
+    }
   };
 
   const filteredAreas = areas.filter((a: any) => {
@@ -633,6 +659,21 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
         onGroupCreated={async () => {
           await refreshGroups();
         }}
+      />
+
+      <AreaStyleModal
+        isOpen={isAreaStyleModalOpen}
+        onClose={() => {
+          setIsAreaStyleModalOpen(false);
+          setStyleAreaTarget(null);
+        }}
+        onSuccess={(updatedArea) => {
+          setAreas((prev: any[]) => prev.map((a: any) => a.id === updatedArea.id ? { ...a, ...updatedArea } : a));
+          setIsAreaStyleModalOpen(false);
+          setStyleAreaTarget(null);
+        }}
+        projectId={project.id}
+        area={styleAreaTarget}
       />
 
       {selectedGroupForManager && (
