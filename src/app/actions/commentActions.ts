@@ -1,9 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 export async function getAreaComments(areaId: string) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   
   const { data, error } = await supabase
     .from("area_comments")

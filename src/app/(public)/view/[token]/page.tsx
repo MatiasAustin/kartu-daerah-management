@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { PublicWorkspace } from "@/components/public/PublicWorkspace";
 
@@ -8,7 +8,7 @@ export default async function PublicViewPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   // Validate Token
   const { data: share } = await supabase
