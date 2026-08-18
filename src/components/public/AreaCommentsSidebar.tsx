@@ -36,10 +36,10 @@ export function AreaCommentsSidebar({
       {/* Sidebar Container */}
       <div className={`
         fixed md:static inset-x-0 bottom-0 md:inset-auto
-        w-full md:w-96 md:h-screen md:border-l border-slate-200 bg-white md:sticky top-0 
+        w-full md:w-96 md:h-screen md:border-l border-slate-200 bg-white md:sticky md:top-0 
         shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:shadow-lg z-[60] flex flex-col
         transition-transform duration-300 ease-in-out
-        ${isOpen ? "translate-y-0 h-[65vh] rounded-t-2xl" : "translate-y-full md:translate-y-0 h-0 md:h-screen"}
+        ${isOpen ? "translate-y-0 h-[75vh] md:h-screen rounded-t-2xl" : "translate-y-full md:translate-y-0 h-0 md:h-screen"}
       `}>
         {/* Mobile Drag Handle & Close */}
         <div className="md:hidden flex items-center justify-center py-3 border-b border-slate-100 bg-white rounded-t-2xl shrink-0 cursor-pointer" onClick={() => setIsOpen(false)}>

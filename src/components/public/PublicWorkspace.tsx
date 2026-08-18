@@ -201,6 +201,7 @@ export function PublicWorkspace({
                 onClose={() => setIsCommentsOpen(false)}
                 publisherId={publisherId}
                 publisherName={publisherName}
+                className="fixed bottom-0 left-0 right-0 md:absolute md:left-auto md:right-4 md:bottom-4 w-full md:w-96 md:rounded-t-2xl md:rounded-b-lg bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:shadow-xl border-t md:border border-slate-200 flex flex-col z-[60] animate-in slide-in-from-bottom-full md:slide-in-from-bottom-8 duration-300 h-[75vh] md:h-[500px] rounded-t-2xl"
               />
             </>
           );
