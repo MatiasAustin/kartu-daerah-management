@@ -196,3 +196,39 @@
     visibility: hidden;
   }
 }
+
+/* Glassmorphism Popup Override */
+.glassmorphism-popup .maplibregl-popup-content {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 40px -10px rgba(31,38,135,0.2) !important;
+  padding: 12px 14px !important;
+  font-family: var(--font-sans) !important;
+}
+
+.glassmorphism-popup .maplibregl-popup-tip {
+  border-top-color: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.glassmorphism-popup .maplibregl-popup-close-button {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  right: 6px;
+  top: 6px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.glassmorphism-popup .maplibregl-popup-close-button:hover {
+  background-color: rgba(0,0,0,0.05);
+  color: #0f172a;
+}

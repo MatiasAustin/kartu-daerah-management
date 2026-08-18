@@ -485,7 +485,53 @@ export function MapContainer({
       // ── Area selection click ──────────────────────────────────────────
       m.on("click", "areas-fill", (e) => {
         if (toolModeRef.current !== "select") return;
-        if (e.features?.length) setSelectedAreaId(e.features[0].id as string);
+        if (e.features?.length) {
+          const area = e.features[0];
+          const areaId = area.id as string || area.properties.id;
+          setSelectedAreaId(areaId);
+
+          const popupContent = document.createElement("div");
+          popupContent.className = "p-1 font-sans min-w-[200px]";
+          popupContent.innerHTML = `
+            <div class="flex flex-col gap-2.5">
+              <div>
+                <h3 class="font-semibold text-slate-800 text-lg m-0 leading-tight">${area.properties.name || "Unknown Area"}</h3>
+                <div class="mt-1.5 px-2.5 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full w-fit">
+                  ${area.properties.group_name || "No Group"}
+                </div>
+              </div>
+              <button id="btn-style-${areaId}" class="mt-1 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer shadow-sm">
+                Edit Style Line
+              </button>
+            </div>
+          `;
+
+          // Close any existing popups automatically
+          const popups = document.getElementsByClassName("mapboxgl-popup");
+          for (let i = 0; i < popups.length; i++) popups[i].remove();
+          
+          const popups2 = document.getElementsByClassName("maplibregl-popup");
+          for (let i = 0; i < popups2.length; i++) popups2[i].remove();
+
+          const popup = new maplibregl.Popup({
+            closeButton: true,
+            closeOnClick: false,
+            className: "glassmorphism-popup"
+          })
+            .setLngLat(e.lngLat)
+            .setDOMContent(popupContent)
+            .addTo(m);
+
+          // Add event listener to the button
+          const btn = popupContent.querySelector(`#btn-style-${areaId}`);
+          if (btn) {
+            btn.addEventListener("click", () => {
+              // Close popup and open style modal
+              popup.remove();
+              window.dispatchEvent(new CustomEvent("open-area-style-modal", { detail: { areaId } }));
+            });
+          }
+        }
       });
       m.on("mouseenter", "areas-fill", () => {
         if (toolModeRef.current === "select") m.getCanvas().style.cursor = "pointer";
@@ -627,6 +673,7 @@ export function MapContainer({
           name: a.name,
           area_number: a.area_number,
           color: a.groups?.color || a.group_color || "#ef4444",
+          group_name: a.groups?.name || a.group_name || "No Group",
         };
 
         if (geo.type === "GeometryCollection" && geo.geometries) {
