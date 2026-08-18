@@ -670,7 +670,7 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
 
       {/* Reference Line Modal */}
       <Sheet open={isReferenceModalOpen} onOpenChange={setIsReferenceModalOpen}>
-        <SheetContent>
+        <SheetContent className="font-sans sm:max-w-md">
           <SheetHeader>
             <SheetTitle>Add Reference Line</SheetTitle>
             <SheetDescription>
