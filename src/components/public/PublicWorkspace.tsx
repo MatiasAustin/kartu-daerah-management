@@ -26,10 +26,12 @@ export function PublicWorkspace({
   activeAssignments = []
 }: PublicWorkspaceProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const { setSelectedAreaId, selectedAreaId, flyToArea } = useMapStore();
 
   const handleAreaClick = (area: any) => {
     setSelectedAreaId(area.id);
+    setIsCommentsOpen(false); // Close comments when switching areas
     
     const geo = resolveGeometry(area);
     if (geo) {
@@ -97,14 +99,20 @@ export function PublicWorkspace({
             // Flat list for Group Share
             <div className="space-y-1">
               {areas.length === 0 && <p className="text-sm text-slate-400 p-2 text-center">Tidak ada area.</p>}
-              {areas.map(area => (
-                <AreaItem 
-                  key={area.id} 
-                  area={area} 
-                  isSelected={selectedAreaId === area.id} 
-                  onClick={() => handleAreaClick(area)} 
-                />
-              ))}
+              {areas.map(area => {
+                const assignment = activeAssignments.find((a: any) => a.area_id === area.id);
+                const pubName = assignment ? publishers.find(p => p.id === assignment.publisher_id)?.name : null;
+                const mappedArea = { ...area, publisher_name: pubName };
+                return (
+                  <AreaItem 
+                    key={area.id} 
+                    area={mappedArea} 
+                    isSelected={selectedAreaId === area.id} 
+                    onClick={() => handleAreaClick(area)} 
+                    onOpenComments={() => setIsCommentsOpen(true)}
+                  />
+                );
+              })}
             </div>
           ) : (
             // Folders for Project Share
@@ -144,6 +152,7 @@ export function PublicWorkspace({
                                 area={mappedArea} 
                                 isSelected={selectedAreaId === area.id} 
                                 onClick={() => handleAreaClick(area)} 
+                                onOpenComments={() => setIsCommentsOpen(true)}
                               />
                             );
                           })
@@ -170,8 +179,8 @@ export function PublicWorkspace({
           readOnly={true} 
         />
         
-        {/* Render comments drawer if area is selected */}
-        {selectedAreaId && (() => {
+        {/* Render comments drawer if area is selected AND comments are open */}
+        {selectedAreaId && isCommentsOpen && (() => {
           const area = areas.find(a => a.id === selectedAreaId);
           if (!area) return null;
           
@@ -181,12 +190,19 @@ export function PublicWorkspace({
           const publisherName = publisher ? publisher.name : null;
 
           return (
-            <PublicAreaComments
-              area={area}
-              onClose={() => setSelectedAreaId(null)}
-              publisherId={publisherId}
-              publisherName={publisherName}
-            />
+            <>
+              {/* Overlay for mobile to close when clicking outside */}
+              <div 
+                className="md:hidden fixed inset-0 z-40 bg-slate-900/20"
+                onClick={() => setIsCommentsOpen(false)}
+              />
+              <PublicAreaComments
+                area={area}
+                onClose={() => setIsCommentsOpen(false)}
+                publisherId={publisherId}
+                publisherName={publisherName}
+              />
+            </>
           );
         })()}
       </div>
@@ -194,7 +210,7 @@ export function PublicWorkspace({
   );
 }
 
-function AreaItem({ area, isSelected, onClick }: { area: any, isSelected: boolean, onClick: () => void }) {
+function AreaItem({ area, isSelected, onClick, onOpenComments }: { area: any, isSelected: boolean, onClick: () => void, onOpenComments: () => void }) {
   const color = area.groups?.color || area.group_color || "#ccc";
   
   const googleMapsUrl = area.center_lat && area.center_lng 
@@ -228,36 +244,50 @@ function AreaItem({ area, isSelected, onClick }: { area: any, isSelected: boolea
       </button>
 
       {isSelected && (
-        <div className="flex items-center gap-2 px-3 pb-3 pt-1 border-t border-indigo-100 mt-1 bg-indigo-50/50">
-          <button
-            onClick={() => {
-              const url = `${window.location.origin}/view/area/${area.id}`;
-              navigator.clipboard.writeText(url);
-              alert("Link disalin!");
-            }}
-            className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded hover:bg-indigo-50 transition-colors"
-            title="Bagikan Area"
-          >
-            <Share2 className="w-3 h-3" /> Share
-          </button>
-          
-          <button
-            onClick={() => window.open(`/view/area/${area.id}`, '_blank')}
-            className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded hover:bg-indigo-50 transition-colors"
-            title="Cetak Area"
-          >
-            <Printer className="w-3 h-3" /> Print
-          </button>
+        <div className="flex flex-col border-t border-indigo-100 bg-indigo-50/50">
+          <div className="flex items-center gap-2 px-3 pt-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenComments();
+              }}
+              className="w-full flex items-center justify-center gap-2 p-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+              Buka Catatan / Komentar
+            </button>
+          </div>
+          <div className="flex items-center gap-2 px-3 pb-3 pt-2">
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/view/area/${area.id}`;
+                navigator.clipboard.writeText(url);
+                alert("Link disalin!");
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded hover:bg-indigo-50 transition-colors"
+              title="Bagikan Area"
+            >
+              <Share2 className="w-3 h-3" /> Share
+            </button>
+            
+            <button
+              onClick={() => window.open(`/view/area/${area.id}`, '_blank')}
+              className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded hover:bg-indigo-50 transition-colors"
+              title="Cetak Area"
+            >
+              <Printer className="w-3 h-3" /> Print
+            </button>
 
-          <a
-            href={googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-white bg-indigo-600 border border-indigo-600 rounded hover:bg-indigo-700 transition-colors"
-            title="Navigasi ke Lokasi"
-          >
-            <Navigation className="w-3 h-3" /> Navigasi
-          </a>
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 p-1.5 text-xs font-medium text-white bg-indigo-600 border border-indigo-600 rounded hover:bg-indigo-700 transition-colors"
+              title="Navigasi ke Lokasi"
+            >
+              <Navigation className="w-3 h-3" /> Navigasi
+            </a>
+          </div>
         </div>
       )}
     </div>
