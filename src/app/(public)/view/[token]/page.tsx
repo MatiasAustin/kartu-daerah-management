@@ -43,6 +43,17 @@ export default async function PublicViewPage({
   }
   const { data: groups } = await groupQuery;
 
+  const { data: publishers } = await supabase
+    .from("publishers")
+    .select("*")
+    .eq("project_id", share.project_id);
+
+  const { data: assignments } = await supabase
+    .from("area_assignments")
+    .select("*")
+    .eq("is_active", true)
+    .in("area_id", areas?.map(a => a.id) || []);
+
   const projectName = (share.projects as any)?.name || "Project Map";
 
   return (
@@ -60,13 +71,15 @@ export default async function PublicViewPage({
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <div className="flex-1 relative flex">
+      {/* Main Content */}
+      <div className="flex-1 relative overflow-hidden">
         <PublicWorkspace 
           project={share.projects} 
           groups={groups || []} 
           areas={areas || []} 
           isGroupShare={!!share.group_id} 
+          publishers={publishers || []}
+          activeAssignments={assignments || []}
         />
       </div>
     </div>

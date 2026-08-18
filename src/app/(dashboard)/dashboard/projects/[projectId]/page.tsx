@@ -73,6 +73,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
     geometry: ref.areas?.geojson || ref.areas?.geometry
   }));
 
+  // Fetch Publishers
+  const { data: publishers } = await supabase
+    .from("publishers")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("name", { ascending: true });
+
+  // Fetch Active Assignments for the areas in this project
+  const { data: assignments } = await supabase
+    .from("area_assignments")
+    .select("area_id, publisher_id")
+    .eq("is_active", true);
+
   return (
     <div className="flex h-full w-full">
       <ProjectWorkspace 
@@ -80,6 +93,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
         initialGroups={groups || []} 
         initialAreas={areas || []} 
         initialReferences={parsedReferences}
+        publishers={publishers || []}
+        activeAssignments={assignments || []}
       />
     </div>
   );

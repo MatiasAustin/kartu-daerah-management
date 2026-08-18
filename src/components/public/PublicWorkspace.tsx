@@ -6,14 +6,25 @@ import { useMapStore } from "@/lib/store/mapStore";
 import { ChevronDown, ChevronRight, MapPin, FolderOpen, Share2, Printer, Navigation } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+import { PublicAreaComments } from "./PublicAreaComments";
+
 interface PublicWorkspaceProps {
   project: any;
   groups: any[];
   areas: any[];
   isGroupShare: boolean;
+  publishers?: any[];
+  activeAssignments?: any[];
 }
 
-export function PublicWorkspace({ project, groups, areas, isGroupShare }: PublicWorkspaceProps) {
+export function PublicWorkspace({ 
+  project, 
+  groups, 
+  areas, 
+  isGroupShare,
+  publishers = [],
+  activeAssignments = []
+}: PublicWorkspaceProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const { setSelectedAreaId, selectedAreaId, flyToArea } = useMapStore();
 
@@ -145,6 +156,26 @@ export function PublicWorkspace({ project, groups, areas, isGroupShare }: Public
       {/* Map Panel - top on mobile, right on desktop */}
       <div className="order-1 md:order-2 flex-1 relative bg-slate-100 min-h-0">
         <MapContainer areas={areas} readOnly={true} />
+        
+        {/* Render comments drawer if area is selected */}
+        {selectedAreaId && (() => {
+          const area = areas.find(a => a.id === selectedAreaId);
+          if (!area) return null;
+          
+          const assignment = activeAssignments.find((a: any) => a.area_id === selectedAreaId);
+          const publisherId = assignment ? assignment.publisher_id : null;
+          const publisher = publisherId ? publishers.find(p => p.id === publisherId) : null;
+          const publisherName = publisher ? publisher.name : null;
+
+          return (
+            <PublicAreaComments
+              area={area}
+              onClose={() => setSelectedAreaId(null)}
+              publisherId={publisherId}
+              publisherName={publisherName}
+            />
+          );
+        })()}
       </div>
     </div>
   );

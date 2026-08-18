@@ -28,10 +28,19 @@ import { AreaStyleModal } from "./AreaStyleModal";
 import { ImportKmlButton } from "./ImportKmlButton";
 import { deleteArea, updateArea } from "@/app/actions/areaActions";
 import { deleteGroup } from "@/app/actions/groupActions";
+import { assignAreaToPublisher } from "@/app/actions/assignmentActions";
 import { ReferenceModal } from "./ReferenceModal";
 import { deleteProjectReference } from "@/app/actions/referenceActions";
+import { PublisherModal } from "./PublisherModal";
 
-export function ProjectWorkspace({ project, initialGroups, initialAreas, initialReferences }: any) {
+export function ProjectWorkspace({ 
+  project, 
+  initialGroups, 
+  initialAreas, 
+  initialReferences,
+  publishers = [],
+  activeAssignments = [] 
+}: any) {
   const [areas, setAreas] = useState(initialAreas);
   const [groups, setGroups] = useState(initialGroups);
   const [references, setReferences] = useState(initialReferences || []);
@@ -71,6 +80,8 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareTarget, setShareTarget] = useState<{ id?: string, name: string, isProject: boolean } | null>(null);
+  
+  const [isPublisherModalOpen, setIsPublisherModalOpen] = useState(false);
 
   const [isMobileListOpen, setIsMobileListOpen] = useState(false);
   const [deleteAreaTarget, setDeleteAreaTarget] = useState<any>(null);
@@ -447,6 +458,19 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
             </div>
           </div>
 
+          {/* PUBLISHERS */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Publishers (Penyiar)</h3>
+            </div>
+            <div className="space-y-1">
+              <Button variant="outline" className="w-full text-xs h-8 justify-start font-normal text-slate-600 bg-white" onClick={() => setIsPublisherModalOpen(true)}>
+                <Users className="w-3.5 h-3.5 mr-2" />
+                Manage {publishers.length} Publishers
+              </Button>
+            </div>
+          </div>
+
           {/* AREAS */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -674,6 +698,14 @@ export function ProjectWorkspace({ project, initialGroups, initialAreas, initial
         }}
         projectId={project.id}
         area={styleAreaTarget}
+      />
+      
+      <PublisherModal
+        isOpen={isPublisherModalOpen}
+        onClose={() => setIsPublisherModalOpen(false)}
+        projectId={project.id}
+        publishers={publishers}
+        activeAssignments={activeAssignments}
       />
 
       {selectedGroupForManager && (

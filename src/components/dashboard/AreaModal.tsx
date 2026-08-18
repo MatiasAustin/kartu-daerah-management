@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { createArea, updateArea } from "@/app/actions/areaActions";
+import { assignAreaToPublisher } from "@/app/actions/assignmentActions";
 import { GroupModal } from "./GroupModal";
 
 interface AreaModalProps {
@@ -16,11 +17,23 @@ interface AreaModalProps {
   onSuccess?: (area: any) => void;
   projectId: string;
   groups: any[];
+  publishers?: any[];
+  activeAssignments?: any[];
   onGroupCreated?: () => void;
   initialData?: any;
 }
 
-export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGroupCreated, initialData }: AreaModalProps) {
+export function AreaModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  projectId, 
+  groups,
+  publishers = [],
+  activeAssignments = [],
+  onGroupCreated, 
+  initialData 
+}: AreaModalProps) {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
 
   const isEditing = !!initialData?.id && !!initialData?.group_id;
@@ -30,6 +43,7 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [groupId, setGroupId] = useState("");
+  const [publisherId, setPublisherId] = useState<string>("unassigned");
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,9 +55,17 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
       setName(initialData?.name || "");
       setDescription(initialData?.description || "");
       setGroupId(initialData?.group_id || "");
+      
+      if (initialData?.id) {
+        const assignment = activeAssignments.find((a: any) => a.area_id === initialData.id);
+        setPublisherId(assignment ? assignment.publisher_id : "unassigned");
+      } else {
+        setPublisherId("unassigned");
+      }
+      
       setError(null);
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, activeAssignments]);
 
   // Auto-select first group when groups load and nothing selected
   useEffect(() => {
@@ -104,12 +126,22 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
       });
     }
 
-    setIsLoading(false);
-
     if (res && "error" in res && res.error) {
       setError(res.error);
-    } else {
-      if (onSuccess) {
+      setIsLoading(false);
+      return;
+    } 
+    
+    // Save assignment if publisherId is valid or changed
+    let finalAreaId = isEditing ? initialData.id : res?.data?.id;
+    if (finalAreaId) {
+      const pubId = publisherId === "unassigned" ? null : publisherId;
+      await assignAreaToPublisher(finalAreaId, pubId, projectId);
+    }
+    
+    setIsLoading(false);
+
+    if (onSuccess) {
         if (isEditing) {
           // For edits, pass back the updated fields merged with the existing record
           onSuccess({
@@ -191,6 +223,23 @@ export function AreaModal({ isOpen, onClose, onSuccess, projectId, groups, onGro
                   ))}
                 </select>
               )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="publisherId">
+                Assign Publisher (Penyiar)
+              </Label>
+              <select
+                id="publisherId"
+                value={publisherId}
+                onChange={(e) => setPublisherId(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="unassigned">-- Unassigned --</option>
+                {publishers.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
 
           {/* Area number + name (Only visible when editing, auto-generated on create) */}
