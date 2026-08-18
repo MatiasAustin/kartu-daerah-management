@@ -214,7 +214,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
   }, [area, group]);
 
   return (
-    <div className="min-h-screen bg-slate-100 py-4 sm:py-8 flex flex-col items-center justify-start overflow-x-hidden print:bg-white print:p-0 print:block">
+    <div className="min-h-[100dvh] bg-slate-100 pt-4 pb-32 sm:py-8 flex flex-col items-center justify-start overflow-x-hidden print:bg-white print:p-0 print:block">
       
       {/* Global Print Styles for A5 */}
       <style dangerouslySetInnerHTML={{__html: `
