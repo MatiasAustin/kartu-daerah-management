@@ -5,8 +5,85 @@ import { MapContainer, resolveGeometry } from "@/components/map/MapContainer";
 import { useMapStore } from "@/lib/store/mapStore";
 import { ChevronDown, ChevronRight, MapPin, FolderOpen, Share2, Printer, Navigation } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { HelpGuide } from "@/components/ui/HelpGuide";
 
 import { PublicAreaComments } from "./PublicAreaComments";
+
+const PUBLIC_HELP_STEPS = [
+  {
+    icon: "🗺️",
+    title: "Selamat Datang, Penyiar!",
+    content: (
+      <div className="space-y-3">
+        <p>Halaman ini adalah tampilan peta kerja Anda. Di sini Anda bisa melihat area yang ditugaskan kepada Anda beserta lokasinya di peta.</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Isi halaman ini:</p>
+          <ul className="space-y-1.5 text-slate-600">
+            <li className="flex gap-2"><span>📋</span><span><strong>Daftar Area</strong> — panel kiri/bawah berisi semua area yang bisa Anda kerjakan</span></li>
+            <li className="flex gap-2"><span>🗺️</span><span><strong>Peta Interaktif</strong> — menampilkan lokasi setiap area secara visual</span></li>
+            <li className="flex gap-2"><span>🟢</span><span>Area dengan <strong>badge nama</strong> berarti sudah ada penyiar yang bertugas</span></li>
+          </ul>
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: "📍",
+    title: "Melihat Area di Peta",
+    content: (
+      <div className="space-y-3">
+        <p>Klik nama area di daftar untuk melihat lokasinya di peta secara otomatis.</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Setelah klik area:</p>
+          <ul className="space-y-1.5 text-slate-600">
+            <li className="flex gap-2"><span>🔍</span><span>Peta akan otomatis zoom ke lokasi area tersebut</span></li>
+            <li className="flex gap-2"><span>⬆️</span><span>Muncul 4 tombol aksi: <strong>Catatan, Share, Print, Navigasi</strong></span></li>
+          </ul>
+        </div>
+        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-700">
+          💡 Anda juga bisa klik langsung pada area di peta untuk memilihnya!
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: "💬",
+    title: "Menulis Catatan / Komentar",
+    content: (
+      <div className="space-y-3">
+        <p>Gunakan fitur catatan untuk melaporkan kondisi area, kendala, atau perkembangan pekerjaan Anda.</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Cara menulis catatan:</p>
+          <ol className="space-y-1.5 text-slate-600 list-decimal list-inside">
+            <li>Klik nama area di daftar</li>
+            <li>Klik tombol biru <strong>"Buka Catatan / Komentar"</strong></li>
+            <li>Ketik pesan Anda di kotak teks di bagian bawah</li>
+            <li>Tekan ikon kirim (➤)</li>
+          </ol>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-xs text-emerald-700">
+          ✅ Catatan Anda akan otomatis tersimpan atas nama Anda sebagai penyiar yang bertugas di area ini.
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: "🧭",
+    title: "Navigasi & Cetak Kartu",
+    content: (
+      <div className="space-y-3">
+        <p>Dari setiap area yang dipilih, ada tombol bantuan lapangan:</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <ul className="space-y-2 text-slate-600">
+            <li className="flex gap-2"><span>🧭</span><span><strong>Navigasi</strong> — buka Google Maps langsung ke lokasi area, cocok digunakan saat di lapangan</span></li>
+            <li className="flex gap-2"><span>🖨️</span><span><strong>Print</strong> — buka halaman kartu area untuk dicetak sebagai panduan fisik</span></li>
+            <li className="flex gap-2"><span>🔗</span><span><strong>Share</strong> — salin link area ini untuk dibagikan ke rekan</span></li>
+          </ul>
+        </div>
+      </div>
+    )
+  }
+];
 
 interface PublicWorkspaceProps {
   project: any;
@@ -89,8 +166,11 @@ export function PublicWorkspace({
       {/* List Panel - bottom on mobile, left on desktop */}
       <div className="order-2 md:order-1 flex-shrink-0 bg-white border-t md:border-t-0 md:border-r border-slate-200 
                       h-[40vh] md:h-full w-full md:w-80 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:shadow-none z-20">
-        <div className="p-4 border-b border-slate-100 bg-slate-50 shrink-0">
-          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-1">Daftar Area</h2>
+        <div className="p-3 border-b border-slate-100 bg-slate-50 shrink-0">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Daftar Area</h2>
+            <HelpGuide steps={PUBLIC_HELP_STEPS} label="Panduan" />
+          </div>
           <p className="text-xs text-slate-500">Pilih area dari daftar untuk melihat lokasinya di peta.</p>
         </div>
         

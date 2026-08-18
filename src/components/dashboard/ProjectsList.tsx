@@ -6,6 +6,71 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FolderKanban, Globe, List, LayoutGrid, Clock, CalendarDays } from "lucide-react";
 import { ProjectCardActions } from "@/components/dashboard/ProjectCardActions";
+import { HelpGuide } from "@/components/ui/HelpGuide";
+
+const PROJECTS_HELP_STEPS = [
+  {
+    icon: "🗂️",
+    title: "Daftar Proyek",
+    content: (
+      <div className="space-y-3">
+        <p>Halaman ini menampilkan semua proyek pemetaan yang Anda kelola. Setiap proyek berisi kumpulan area penyiaran yang dibagi ke dalam grup-grup.</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Yang bisa Anda lakukan:</p>
+          <ul className="space-y-1.5 text-slate-600">
+            <li className="flex gap-2"><span>📁</span><span>Klik kartu proyek untuk masuk ke editor peta</span></li>
+            <li className="flex gap-2"><span>🔢</span><span>Urutkan proyek berdasarkan nama, tanggal dibuat, atau terakhir diedit</span></li>
+            <li className="flex gap-2"><span>⊞</span><span>Ganti tampilan antara Grid atau List</span></li>
+          </ul>
+        </div>
+        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-700">
+          💡 Klik tombol <strong>"+ New Project"</strong> (pojok kanan atas halaman) untuk membuat proyek baru.
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: "⚙️",
+    title: "Kelola Proyek",
+    content: (
+      <div className="space-y-3">
+        <p>Setiap kartu proyek milik Anda memiliki menu aksi di pojok kanan atas kartu (ikon titik tiga).</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Menu Aksi Proyek:</p>
+          <ul className="space-y-1.5 text-slate-600">
+            <li className="flex gap-2"><span>✏️</span><span><strong>Rename</strong> — ubah nama proyek</span></li>
+            <li className="flex gap-2"><span>🔗</span><span><strong>Share</strong> — buat link publik untuk penyiar</span></li>
+            <li className="flex gap-2"><span>🗑️</span><span><strong>Delete</strong> — hapus proyek beserta semua areanya</span></li>
+          </ul>
+        </div>
+        <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-700">
+          ⚠️ Menghapus proyek bersifat permanen dan tidak dapat dibatalkan. Semua area dan data di dalamnya akan ikut terhapus.
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: "🔗",
+    title: "Berbagi ke Penyiar",
+    content: (
+      <div className="space-y-3">
+        <p>Penyiar (field worker) tidak perlu login. Cukup bagikan link publik agar mereka bisa melihat peta dan mengisi catatan/komentar di area mereka.</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Cara berbagi:</p>
+          <ol className="space-y-1.5 text-slate-600 list-decimal list-inside">
+            <li>Klik ikon ⋮ di kartu proyek</li>
+            <li>Pilih <strong>"Share"</strong></li>
+            <li>Aktifkan tombol link publik</li>
+            <li>Salin link atau QR Code dan kirim ke penyiar</li>
+          </ol>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-xs text-emerald-700">
+          ✅ Anda juga bisa berbagi hanya satu grup spesifik dari dalam editor proyek.
+        </div>
+      </div>
+    )
+  }
+];
 
 interface ProjectsListProps {
   projects: any[];
@@ -66,11 +131,12 @@ export function ProjectsList({ projects, currentUserId }: ProjectsListProps) {
     <div className="space-y-6">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
-        <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
+        <div className="flex items-center gap-3 text-sm text-slate-600 font-medium">
           <span className="bg-slate-200 text-slate-700 py-0.5 px-2 rounded-full text-xs">
             {projects.length}
           </span>
           Projects
+          <HelpGuide steps={PROJECTS_HELP_STEPS} label="Panduan" />
         </div>
         
         <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">

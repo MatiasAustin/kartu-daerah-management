@@ -227,7 +227,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       `}} />
 
       {/* A5 Card Container Wrapper for Screen Scaling */}
-      <div className="w-full flex justify-center origin-top transform scale-[0.65] sm:scale-100 transition-transform print:scale-100 print:transform-none -mb-[73.5mm] sm:mb-0">
+      <div className="w-full flex justify-center origin-top transform scale-[0.78] sm:scale-100 transition-transform print:scale-100 print:transform-none -mb-[46mm] sm:mb-0">
         
         {/* A5 physical size is 148mm x 210mm */}
         <div 
@@ -297,7 +297,7 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       </div>
       
       {/* Action Bar (Responsive flow on screen, Hidden on print) */}
-      <div className="w-full max-w-[148mm] px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-8 print:hidden z-50">
+      <div className="w-full max-w-[148mm] px-2 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6 sm:mt-8 print:hidden z-50">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full sm:max-w-[200px] text-sm">
           <h4 className="font-bold text-slate-800 mb-1.5">Printing Tips</h4>
           <ul className="text-slate-600 space-y-1 text-xs list-disc pl-4">

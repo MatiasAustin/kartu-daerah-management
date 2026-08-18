@@ -77,10 +77,13 @@ export function PublicAreaComments({
       </div>
       
       {/* Assignment Info */}
-      <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-2 shrink-0">
-        <User className="w-4 h-4 text-slate-400" />
+      <div className={`px-4 py-2 border-b border-slate-100 flex items-center gap-2 shrink-0 ${publisherName ? "bg-slate-50" : "bg-amber-50"}`}>
+        <User className={`w-4 h-4 shrink-0 ${publisherName ? "text-slate-400" : "text-amber-400"}`} />
         <div className="text-xs text-slate-600">
-          Saat ini ditugaskan ke: <span className="font-semibold text-slate-800">{publisherName || "Belum ada (Unassigned)"}</span>
+          {publisherName
+            ? <>Saat ini ditugaskan ke: <span className="font-semibold text-slate-800">{publisherName}</span></>
+            : <span className="text-amber-700">Area ini belum memiliki penyiar yang ditugaskan.</span>
+          }
         </div>
       </div>
 
@@ -89,6 +92,15 @@ export function PublicAreaComments({
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+          </div>
+        ) : !publisherId ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 py-8 px-4 text-center">
+            <svg className="w-10 h-10 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <p className="text-sm text-slate-500 leading-relaxed max-w-[220px]">
+              Kolom komentar dan catatan akan aktif setelah penyiar ditugaskan ke area ini.
+            </p>
           </div>
         ) : comments.length === 0 ? (
           <div className="text-center py-8 text-sm text-slate-400">
@@ -130,8 +142,8 @@ export function PublicAreaComments({
             </button>
           </form>
         ) : (
-          <div className="text-xs text-center text-slate-500 py-2">
-            Pilih penyiar untuk area ini dari Dashboard untuk mengaktifkan komentar.
+          <div className="text-xs text-center text-amber-600 bg-amber-50 border border-amber-100 rounded-lg py-2.5 px-3">
+            Fitur komentar akan aktif setelah penyiar ditugaskan ke area ini.
           </div>
         )}
       </div>

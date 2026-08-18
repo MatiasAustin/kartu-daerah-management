@@ -8,6 +8,89 @@ import { Loader2, Trash2, Edit, Phone, UserPlus } from "lucide-react";
 import { createPublisher, updatePublisher, deletePublisher } from "@/app/actions/publisherActions";
 import { assignAreaToPublisher } from "@/app/actions/assignmentActions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { HelpGuide } from "@/components/ui/HelpGuide";
+
+const PUBLISHER_HELP_STEPS = [
+  {
+    icon: "👷",
+    title: "Manajemen Penyiar",
+    content: (
+      <div className="space-y-3">
+        <p>Halaman ini digunakan untuk mendaftarkan dan mengelola <strong>Penyiar</strong> (field worker) yang akan bertugas di area pemetaan.</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Fitur utama:</p>
+          <ul className="space-y-1.5 text-slate-600">
+            <li className="flex gap-2"><span>➕</span><span>Tambahkan penyiar baru beserta nama dan nomor kontak</span></li>
+            <li className="flex gap-2"><span>📍</span><span>Tugaskan penyiar ke area tertentu dalam sebuah proyek</span></li>
+            <li className="flex gap-2"><span>✏️</span><span>Edit atau hapus data penyiar yang sudah ada</span></li>
+          </ul>
+        </div>
+        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-700">
+          💡 Setelah penyiar ditugaskan ke sebuah area, komentar yang mereka tinggalkan di public view akan otomatis tercatat atas nama mereka.
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: "➕",
+    title: "Menambah Penyiar Baru",
+    content: (
+      <div className="space-y-3">
+        <p>Gunakan formulir <strong>"Add Field Worker"</strong> untuk mendaftarkan penyiar baru.</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Langkah-langkah:</p>
+          <ol className="space-y-1.5 text-slate-600 list-decimal list-inside">
+            <li>Isi <strong>Nama Lengkap</strong> penyiar</li>
+            <li>Isi <strong>Kontak</strong> (nomor telepon, opsional)</li>
+            <li>Pilih <strong>Proyek</strong> tempat penyiar bertugas</li>
+            <li>Klik <strong>"Add Field Worker"</strong></li>
+          </ol>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-xs text-emerald-700">
+          ✅ Setelah berhasil ditambahkan, penyiar akan muncul di tabel di bawah ini.
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: "📍",
+    title: "Menugaskan Area ke Penyiar",
+    content: (
+      <div className="space-y-3">
+        <p>Setiap penyiar perlu ditugaskan ke area spesifik agar komentar mereka bisa tercatat dengan benar.</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Cara assign area:</p>
+          <ol className="space-y-1.5 text-slate-600 list-decimal list-inside">
+            <li>Cari nama penyiar di tabel</li>
+            <li>Klik ikon <strong>👤+ (Assign Area)</strong> di kolom aksi</li>
+            <li>Pilih area-area yang ingin ditugaskan (bisa lebih dari satu)</li>
+            <li>Klik <strong>"Save Assignments"</strong></li>
+          </ol>
+        </div>
+        <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-700">
+          ⚠️ Satu area hanya bisa dipegang oleh satu penyiar aktif. Jika ditugaskan ke penyiar lain, penugasan sebelumnya akan dinonaktifkan.
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: "🗺️",
+    title: "Status Area di Peta Publik",
+    content: (
+      <div className="space-y-3">
+        <p>Setelah penugasan disimpan, status area akan langsung terlihat di tampilan publik yang diakses penyiar.</p>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          <p className="font-semibold text-slate-700 text-xs uppercase tracking-wide">Yang akan terlihat di publik:</p>
+          <ul className="space-y-1.5 text-slate-600">
+            <li className="flex gap-2"><span>🟢</span><span>Badge nama penyiar muncul di samping setiap area di daftar</span></li>
+            <li className="flex gap-2"><span>💬</span><span>Kolom komentar aktif dan komentar tercatat atas nama penyiar</span></li>
+            <li className="flex gap-2"><span>📌</span><span>Popup peta juga menampilkan siapa yang bertugas di area tersebut</span></li>
+          </ul>
+        </div>
+      </div>
+    )
+  }
+];
 
 export function PublisherManager({ 
   projects, 
@@ -118,8 +201,13 @@ export function PublisherManager({
   return (
     <div className="space-y-8 mt-12">
       <div className="mb-4">
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Field Worker (Penyiar) Management</h2>
-        <p className="text-slate-500 mt-1">Manage field workers who will be assigned to specific areas.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Field Worker (Penyiar) Management</h2>
+            <p className="text-slate-500 mt-1">Manage field workers who will be assigned to specific areas.</p>
+          </div>
+          <HelpGuide steps={PUBLISHER_HELP_STEPS} label="Panduan Penyiar" />
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 mb-8">
