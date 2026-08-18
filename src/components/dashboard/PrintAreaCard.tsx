@@ -216,37 +216,6 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
   return (
     <div className="min-h-screen bg-slate-100 py-4 sm:py-8 flex flex-col items-center justify-start overflow-x-hidden print:bg-white print:p-0 print:block">
       
-      {/* Action Bar (Responsive flow on screen, Hidden on print) */}
-      <div className="w-full max-w-[148mm] px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 print:hidden z-50">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full sm:max-w-[200px] text-sm">
-          <h4 className="font-bold text-slate-800 mb-1.5">Printing Tips</h4>
-          <ul className="text-slate-600 space-y-1 text-xs list-disc pl-4">
-            <li>Set Paper Size to <strong>A5</strong></li>
-            <li>Set Margins to <strong>None</strong></li>
-            <li>Check <strong>Background graphics</strong></li>
-          </ul>
-        </div>
-        <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">
-          <button
-            onClick={() => {
-              const url = `${window.location.origin}/view/area/${area.id}`;
-              navigator.clipboard.writeText(url);
-              alert("Public link copied to clipboard!");
-            }}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg shadow-lg hover:bg-slate-900 transition-colors font-medium w-full"
-          >
-            Copy Share Link
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-medium w-full"
-          >
-            <Printer className="w-4 h-4" />
-            Print / Export PDF
-          </button>
-        </div>
-      </div>
-
       {/* Global Print Styles for A5 */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
@@ -324,6 +293,37 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
             <QRCodeSVG value={googleMapsUrl} size={76} level="H" />
           </div>
         </footer>
+        </div>
+      </div>
+      
+      {/* Action Bar (Responsive flow on screen, Hidden on print) */}
+      <div className="w-full max-w-[148mm] px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-8 print:hidden z-50">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full sm:max-w-[200px] text-sm">
+          <h4 className="font-bold text-slate-800 mb-1.5">Printing Tips</h4>
+          <ul className="text-slate-600 space-y-1 text-xs list-disc pl-4">
+            <li>Set Paper Size to <strong>A5</strong></li>
+            <li>Set Margins to <strong>None</strong></li>
+            <li>Check <strong>Background graphics</strong></li>
+          </ul>
+        </div>
+        <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/view/area/${area.id}`;
+              navigator.clipboard.writeText(url);
+              alert("Public link copied to clipboard!");
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg shadow-lg hover:bg-slate-900 transition-colors font-medium w-full"
+          >
+            Copy Share Link
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-medium w-full"
+          >
+            <Printer className="w-4 h-4" />
+            Print / Export PDF
+          </button>
         </div>
       </div>
 

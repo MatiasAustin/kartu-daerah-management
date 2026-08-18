@@ -8,12 +8,14 @@ export function PublicAreaComments({
   area, 
   onClose,
   publisherId,
-  publisherName
+  publisherName,
+  className
 }: { 
   area: any; 
-  onClose: () => void;
+  onClose?: () => void;
   publisherId: string | null;
   publisherName: string | null;
+  className?: string;
 }) {
   const [comments, setComments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,7 +61,7 @@ export function PublicAreaComments({
   if (!area) return null;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 md:left-auto md:right-4 md:bottom-4 md:w-96 md:rounded-t-2xl md:rounded-b-lg bg-white shadow-2xl md:shadow-xl border-t md:border border-slate-200 flex flex-col z-50 animate-in slide-in-from-bottom-full md:slide-in-from-bottom-8 duration-300 h-[60vh] md:h-[500px]">
+    <div className={className || "absolute bottom-0 left-0 right-0 md:left-auto md:right-4 md:bottom-4 md:w-96 md:rounded-t-2xl md:rounded-b-lg bg-white shadow-2xl md:shadow-xl border-t md:border border-slate-200 flex flex-col z-50 animate-in slide-in-from-bottom-full md:slide-in-from-bottom-8 duration-300 h-[60vh] md:h-[500px]"}>
       
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white md:rounded-t-2xl shrink-0">
@@ -67,9 +69,11 @@ export function PublicAreaComments({
           <h3 className="font-semibold text-slate-800 text-sm">Comments & History</h3>
           <p className="text-xs text-slate-500 truncate max-w-[200px]">{area.name || `Area ${area.area_number}`}</p>
         </div>
-        <button onClick={onClose} className="p-2 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
-          <X className="w-5 h-5" />
-        </button>
+        {onClose && (
+          <button onClick={onClose} className="p-2 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
       
       {/* Assignment Info */}
