@@ -6,9 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function InviteUserForm({ groups }: { groups: any[] }) {
+export function InviteUserForm({ projects, groups }: { projects: any[], groups: any[] }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+
+  const filteredGroups = selectedProjectId 
+    ? groups.filter(g => g.project_id === selectedProjectId)
+    : [];
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
@@ -37,10 +42,27 @@ export function InviteUserForm({ groups }: { groups: any[] }) {
       )}
 
       <form action={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
             <Input id="email" name="email" type="email" required placeholder="manager@example.com" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="projectId">Select Project</Label>
+            <select 
+              id="projectId" 
+              name="projectId" 
+              required
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Select a project...</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
           
           <div className="space-y-2">
@@ -49,10 +71,11 @@ export function InviteUserForm({ groups }: { groups: any[] }) {
               id="groupId" 
               name="groupId" 
               required
+              disabled={!selectedProjectId}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">Select a group...</option>
-              {groups.map(g => (
+              {filteredGroups.map(g => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>

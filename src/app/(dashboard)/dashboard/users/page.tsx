@@ -10,10 +10,16 @@ export default async function UsersPage() {
     redirect("/login");
   }
 
+  // Fetch projects owned by the current user
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id, name")
+    .eq("owner_id", session.user.id);
+
   // Fetch groups owned by the current user's projects
   const { data: groups } = await supabase
     .from("groups")
-    .select("id, name, projects!inner(owner_id)")
+    .select("id, name, project_id, projects!inner(owner_id)")
     .eq("projects.owner_id", session.user.id);
 
   // Fetch existing group managers
@@ -36,7 +42,7 @@ export default async function UsersPage() {
         <p className="text-slate-500 mt-2">Invite users and assign them as area managers.</p>
       </div>
 
-      <InviteUserForm groups={groups || []} />
+      <InviteUserForm projects={projects || []} groups={groups || []} />
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
