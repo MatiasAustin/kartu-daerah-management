@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { InviteUserForm } from "./InviteUserForm";
+import { ManagerRow } from "./ManagerRow";
 
 export default async function UsersPage() {
   const supabase = await createClient();
@@ -23,17 +24,43 @@ export default async function UsersPage() {
     .eq("projects.owner_id", session.user.id);
 
   // Fetch existing group managers
-  const { data: managers } = await supabase
+  const { data: managersData, error: managersError } = await supabase
     .from("group_managers")
     .select(`
       id,
       user_id,
       created_at,
-      groups!inner(id, name, projects!inner(owner_id)),
-      profiles:user_id(email, full_name)
+      groups!inner(id, name, projects!inner(owner_id))
     `)
     .eq("groups.projects.owner_id", session.user.id)
     .order("created_at", { ascending: false });
+
+  if (managersError) {
+    console.error("Error fetching managers:", managersError);
+  }
+
+  let managers = [];
+  if (managersData && managersData.length > 0) {
+    const userIds = managersData.map((m: any) => m.user_id);
+    
+    // Fetch profiles
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .in("id", userIds);
+
+    // Fetch permissions
+    const { data: permissions } = await supabase
+      .from("group_permissions")
+      .select("*")
+      .in("user_id", userIds);
+
+    managers = managersData.map((m: any) => ({
+      ...m,
+      profiles: profiles?.find((p: any) => p.id === m.user_id) || null,
+      permissions: permissions?.find((p: any) => p.group_id === m.groups.id && p.user_id === m.user_id) || null
+    }));
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
@@ -61,26 +88,12 @@ export default async function UsersPage() {
                   <th className="px-6 py-3">User</th>
                   <th className="px-6 py-3">Group (Area)</th>
                   <th className="px-6 py-3">Assigned Date</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {managers.map((manager: any) => (
-                  <tr key={manager.id} className="bg-white border-b border-slate-100 hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-900">
-                      {manager.profiles?.email || manager.user_id}
-                      {manager.profiles?.full_name && (
-                        <div className="text-xs text-slate-500 font-normal">{manager.profiles.full_name}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                        {manager.groups?.name || 'Unknown Group'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500">
-                      {new Date(manager.created_at).toLocaleDateString()}
-                    </td>
-                  </tr>
+                  <ManagerRow key={manager.id} manager={manager} />
                 ))}
               </tbody>
             </table>

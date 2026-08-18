@@ -25,15 +25,26 @@ export async function inviteManagerAction(formData: FormData) {
     const adminAuthClient = createAdminClient();
 
     // 3. Invite the user
+    let invitedUserId = "";
     const { data: inviteData, error: inviteError } = await adminAuthClient.auth.admin.inviteUserByEmail(email, {
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
     });
 
     if (inviteError) {
-      return { error: `Failed to invite user: ${inviteError.message}` };
+      if (inviteError.status === 422 || inviteError.message.includes("registered")) {
+        // User already exists, try to get their ID from profiles
+        const { data: existingProfile } = await supabase.from('profiles').select('id').eq('email', email).single();
+        if (existingProfile) {
+          invitedUserId = existingProfile.id;
+        } else {
+          return { error: `User is already registered but profile missing. Cannot assign.` };
+        }
+      } else {
+        return { error: `Failed to invite user: ${inviteError.message}` };
+      }
+    } else {
+      invitedUserId = inviteData.user.id;
     }
-
-    const invitedUserId = inviteData.user.id;
 
     // 4. Assign the user to the group managers
     const { error: managerError } = await supabase
@@ -71,6 +82,53 @@ export async function inviteManagerAction(formData: FormData) {
     revalidatePath("/dashboard/users");
     return { success: true, message: `Successfully invited ${email} and assigned to group.` };
     
+  } catch (err: any) {
+    return { error: err.message || "An unexpected error occurred" };
+  }
+}
+
+export async function removeManagerAction(managerId: string, groupId: string, userId: string) {
+  try {
+    const supabase = await createClient();
+    
+    // Check if the current user is authorized (done via RLS, but we can just attempt delete)
+    const { error } = await supabase
+      .from("group_managers")
+      .delete()
+      .eq("id", managerId);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    // Also remove permissions
+    await supabase
+      .from("group_permissions")
+      .delete()
+      .match({ group_id: groupId, user_id: userId });
+
+    revalidatePath("/dashboard/users");
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || "An unexpected error occurred" };
+  }
+}
+
+export async function updateManagerPermissionsAction(groupId: string, userId: string, permissions: any) {
+  try {
+    const supabase = await createClient();
+    
+    const { error } = await supabase
+      .from("group_permissions")
+      .update(permissions)
+      .match({ group_id: groupId, user_id: userId });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    revalidatePath("/dashboard/users");
+    return { success: true };
   } catch (err: any) {
     return { error: err.message || "An unexpected error occurred" };
   }
