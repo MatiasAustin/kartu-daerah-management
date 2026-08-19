@@ -46,5 +46,18 @@ export default async function PrintAreaPage({
     return notFound();
   }
 
-  return <PrintAreaCard project={project} group={group} area={area} />;
+  // Fetch active assignment
+  const { data: assignment } = await supabase
+    .from("area_assignments")
+    .select("publishers(name)")
+    .eq("area_id", area.id)
+    .eq("is_active", true)
+    .single();
+
+  const areaWithPublisher = {
+    ...area,
+    publisher_name: (assignment?.publishers as any)?.name || null
+  };
+
+  return <PrintAreaCard project={project} group={group} area={areaWithPublisher} />;
 }

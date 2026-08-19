@@ -297,16 +297,44 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
       </div>
       
       {/* Action Bar (Responsive flow on screen, Hidden on print) */}
-      <div className="w-full max-w-[148mm] px-2 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6 sm:mt-8 print:hidden z-50">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 w-full sm:max-w-[200px] text-sm">
-          <h4 className="font-bold text-slate-800 mb-1.5">Printing Tips</h4>
-          <ul className="text-slate-600 space-y-1 text-xs list-disc pl-4">
-            <li>Set Paper Size to <strong>A5</strong></li>
-            <li>Set Margins to <strong>None</strong></li>
-            <li>Check <strong>Background graphics</strong></li>
-          </ul>
+      <div className="w-full max-w-[148mm] px-2 sm:px-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4 mt-6 sm:mt-8 print:hidden z-50">
+        
+        <div className="flex flex-col gap-3 w-full sm:max-w-[220px]">
+          {/* Assignment Status Badge */}
+          {area.publisher_name ? (
+            <div className="bg-emerald-50 p-2.5 rounded-lg border border-emerald-100 flex items-center gap-2.5 shadow-sm">
+              <div className="bg-emerald-100 p-1.5 rounded-md text-emerald-600 shrink-0">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              </div>
+              <div className="text-xs text-emerald-800 leading-tight">
+                <span className="opacity-75">Assigned to:</span> <br/>
+                <strong className="font-semibold text-[13px]">{area.publisher_name}</strong>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-100 flex items-center gap-2.5 shadow-sm">
+              <div className="bg-amber-100 p-1.5 rounded-md text-amber-500 shrink-0">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              </div>
+              <div className="text-xs text-amber-800 font-medium">Unassigned Area</div>
+            </div>
+          )}
+
+          {/* Printing Tips */}
+          <div className="bg-white p-3.5 rounded-lg shadow-sm border border-slate-200 text-sm">
+            <h4 className="font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+              <Printer className="w-4 h-4 text-slate-400" />
+              Printing Tips
+            </h4>
+            <ul className="text-slate-600 space-y-1 text-xs list-disc pl-4">
+              <li>Set Paper Size to <strong>A5</strong></li>
+              <li>Set Margins to <strong>None</strong></li>
+              <li>Check <strong>Background graphics</strong></li>
+            </ul>
+          </div>
         </div>
-        <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0">
+
+        <div className="flex flex-col gap-3 w-full sm:w-auto shrink-0 mt-1 sm:mt-0">
           <button
             onClick={() => {
               const url = `${window.location.origin}/view/area/${area.id}`;
