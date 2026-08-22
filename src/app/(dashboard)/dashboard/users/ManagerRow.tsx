@@ -20,7 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-export function ManagerRow({ manager }: { manager: any }) {
+export function ManagerRow({ manager, canEdit = true }: { manager: any, canEdit?: boolean }) {
   const [isDeleting, setIsDeleting] = useState(false);
   
   // Permissions state
