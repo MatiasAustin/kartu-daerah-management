@@ -92,26 +92,30 @@ export function ManagerRow({ manager }: { manager: any }) {
           {new Date(manager.created_at).toLocaleDateString()}
         </td>
         <td className="px-6 py-4 text-right">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4 text-slate-500" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 font-sans">
-              <DropdownMenuItem onClick={() => setIsEditNameDialogOpen(true)}>
-                <UserIcon className="mr-2 h-4 w-4" />
-                <span>Edit Name</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
-                <Edit2 className="mr-2 h-4 w-4" />
-                <span>Edit Role</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleRemove} disabled={isDeleting} className="text-red-600 focus:text-red-600 focus:bg-red-50">
-                <Trash2 className="mr-2 h-4 w-4" />
-                <span>{isDeleting ? "Removing..." : "Remove"}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canEdit ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4 text-slate-500" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 font-sans">
+                <DropdownMenuItem onClick={() => setIsEditNameDialogOpen(true)}>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>Edit Name</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                  <Edit2 className="mr-2 h-4 w-4" />
+                  <span>Edit Role</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleRemove} disabled={isDeleting} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>{isDeleting ? "Removing..." : "Remove"}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <span className="text-xs text-slate-400 italic">View only</span>
+          )}
         </td>
       </tr>
 

@@ -24,31 +24,44 @@ export default async function UsersPage() {
     .select("projects(id, name)")
     .eq("user_id", session.user.id);
 
-  const adminProjects = adminProjectsResult?.map((p: any) => p.projects).filter(Boolean) || [];
+  // Fetch projects where user is just an area manager
+  const { data: managedGroupsResult } = await supabase
+    .from("group_managers")
+    .select("groups!inner(projects!inner(id, name))")
+    .eq("user_id", session.user.id);
+
+  const adminProjectsArray = adminProjectsResult?.map((p: any) => p.projects).filter(Boolean) || [];
+  const managerProjectsArray = managedGroupsResult?.map((g: any) => g.groups?.projects).filter(Boolean) || [];
   
-  // Combine unique projects
-  const allProjects = [...(ownedProjects || []), ...adminProjects];
-  const uniqueProjectsMap = new Map(allProjects.map(p => [p.id, p]));
-  const projects = Array.from(uniqueProjectsMap.values());
+  // Combine unique projects for Admin access
+  const allAdminProjects = [...(ownedProjects || []), ...adminProjectsArray];
+  const uniqueAdminProjectsMap = new Map(allAdminProjects.map(p => [p.id, p]));
+  const adminProjects = Array.from(uniqueAdminProjectsMap.values());
+  const adminProjectIds = adminProjects.map(p => p.id);
 
-  const projectIds = projects.map(p => p.id);
+  // Combine unique projects for Manager (View only) access
+  const uniqueManagerProjectsMap = new Map(managerProjectsArray.map((p: any) => [p.id, p]));
+  const managerProjects = Array.from(uniqueManagerProjectsMap.values());
+  const managerProjectIds = managerProjects.map((p: any) => p.id).filter((id: string) => !adminProjectIds.includes(id));
 
-  // Fetch groups for these projects
-  const { data: groups } = projectIds.length > 0 ? await supabase
+  const allVisibleProjectIds = [...adminProjectIds, ...managerProjectIds];
+
+  // Fetch groups for admin projects (used for inviting)
+  const { data: adminGroups } = adminProjectIds.length > 0 ? await supabase
     .from("groups")
     .select("id, name, project_id, projects!inner(owner_id)")
-    .in("project_id", projectIds) : { data: [] };
+    .in("project_id", adminProjectIds) : { data: [] };
 
-  // Fetch existing group managers
-  const { data: managersData, error: managersError } = projectIds.length > 0 ? await supabase
+  // Fetch existing group managers for all visible projects
+  const { data: managersData, error: managersError } = allVisibleProjectIds.length > 0 ? await supabase
     .from("group_managers")
     .select(`
       id,
       user_id,
       created_at,
-      groups!inner(id, name, project_id, projects!inner(owner_id))
+      groups!inner(id, name, project_id, projects!inner(owner_id, id))
     `)
-    .in("groups.project_id", projectIds)
+    .in("groups.project_id", allVisibleProjectIds)
     .order("created_at", { ascending: false }) : { data: [], error: null };
 
   if (managersError) {
@@ -74,27 +87,28 @@ export default async function UsersPage() {
     managers = managersData.map((m: any) => ({
       ...m,
       profiles: profiles?.find((p: any) => p.id === m.user_id) || null,
-      permissions: permissions?.find((p: any) => p.group_id === m.groups.id && p.user_id === m.user_id) || null
+      permissions: permissions?.find((p: any) => p.group_id === m.groups.id && p.user_id === m.user_id) || null,
+      canEdit: adminProjectIds.includes(m.groups.projects.id)
     }));
   }
 
-  // Fetch Publishers (Field Workers)
+  // Fetch Publishers (Field Workers) ONLY for Admin projects
   let publishers: any[] = [];
   let areas: any[] = [];
   let activeAssignments: any[] = [];
 
-  if (projectIds.length > 0) {
+  if (adminProjectIds.length > 0) {
     const { data: pubData } = await supabase
       .from("publishers")
       .select("*, projects(name)")
-      .in("project_id", projectIds)
+      .in("project_id", adminProjectIds)
       .order("created_at", { ascending: false });
     publishers = pubData || [];
 
     const { data: areaData } = await supabase
       .from("areas")
       .select("id, name, area_number, group_id, project_id")
-      .in("project_id", projectIds);
+      .in("project_id", adminProjectIds);
     areas = areaData || [];
 
     if (areas.length > 0) {
@@ -114,9 +128,11 @@ export default async function UsersPage() {
         <p className="text-slate-500 mt-2">Invite users and assign them as area managers.</p>
       </div>
 
-      <InviteUserForm projects={projects || []} groups={groups || []} />
+      {adminProjects.length > 0 && (
+        <InviteUserForm projects={adminProjects} groups={adminGroups || []} />
+      )}
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
           <h3 className="font-semibold text-slate-800">Current Managers</h3>
         </div>
@@ -138,7 +154,7 @@ export default async function UsersPage() {
               </thead>
               <tbody>
                 {managers.map((manager: any) => (
-                  <ManagerRow key={manager.id} manager={manager} />
+                  <ManagerRow key={manager.id} manager={manager} canEdit={manager.canEdit} />
                 ))}
               </tbody>
             </table>
@@ -146,13 +162,15 @@ export default async function UsersPage() {
         )}
       </div>
 
-      <PublisherManager 
-        projects={projects || []} 
-        initialPublishers={publishers}
-        initialAreas={areas}
-        initialGroups={groups || []}
-        initialAssignments={activeAssignments}
-      />
+      {adminProjects.length > 0 && (
+        <PublisherManager 
+          projects={adminProjects} 
+          initialPublishers={publishers}
+          initialAreas={areas}
+          initialGroups={adminGroups || []}
+          initialAssignments={activeAssignments}
+        />
+      )}
     </div>
   );
 }
