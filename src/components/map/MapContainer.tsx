@@ -186,6 +186,8 @@ export function MapContainer({
   // ── Tool state ──────────────────────────────────────────────────────────────
   const [toolMode, setToolMode] = useState<ToolMode>("select");
   const toolModeRef = useRef<ToolMode>("select");
+  const [isMagnetMode, setIsMagnetMode] = useState(false);
+  const isMagnetModeRef = useRef(false);
   const [penPoints, setPenPoints] = useState<[number, number][]>([]);
   const penPointsRef = useRef<[number, number][]>([]);
   const mousePosRef = useRef<[number, number] | null>(null);
@@ -205,9 +207,13 @@ export function MapContainer({
   const editGeometryRef = useRef<any>(null);
   const draggingVertexRef = useRef<number | null>(null);
 
-  // ── Callback refs ───────────────────────────────────────────────────────────
   const onAreaCreateRef = useRef(onAreaCreate);
   const onAreaUpdateRef = useRef(onAreaUpdate);
+
+  // ── Sync refs ───────────────────────────────────────────────────────────────
+  useEffect(() => { toolModeRef.current = toolMode; }, [toolMode]);
+  useEffect(() => { isMagnetModeRef.current = isMagnetMode; }, [isMagnetMode]);
+  useEffect(() => { onAreaUpdateRef.current = onAreaUpdate; }, [onAreaUpdate]);
   const areasRef = useRef(areas);
 
   useEffect(() => { onAreaCreateRef.current = onAreaCreate; }, [onAreaCreate]);
@@ -575,7 +581,7 @@ export function MapContainer({
       // ── Pen tool: map click ───────────────────────────────────────────
       m.on("click", (e: MapLibreTypes.MapMouseEvent) => {
         if (toolModeRef.current !== "pen") return;
-        const lngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+        const lngLat: [number, number] = mousePosRef.current || [e.lngLat.lng, e.lngLat.lat];
         const pts = penPointsRef.current;
 
         // Snap-to-close
@@ -596,7 +602,46 @@ export function MapContainer({
       // ── Pen tool: mousemove ───────────────────────────────────────────
       m.on("mousemove", (e: MapLibreTypes.MapMouseEvent) => {
         if (toolModeRef.current !== "pen") return;
-        mousePosRef.current = [e.lngLat.lng, e.lngLat.lat];
+        
+        let snappedLngLat = [e.lngLat.lng, e.lngLat.lat] as [number, number];
+        
+        if (isMagnetModeRef.current) {
+          const ptPx = e.point;
+          const radius = 25;
+          const features = m.queryRenderedFeatures(
+            [[ptPx.x - radius, ptPx.y - radius], [ptPx.x + radius, ptPx.y + radius]]
+          );
+          
+          let closestDist = Infinity;
+          let closestPt: [number, number] | null = null;
+          
+          for (const f of features) {
+            // Ignore own layers
+            if (f.layer.id.includes("edit") || f.layer.id.includes("areas") || f.layer.id.includes("ref")) continue;
+            
+            if (f.geometry?.type === "LineString" || f.geometry?.type === "MultiLineString" || f.geometry?.type === "Polygon" || f.geometry?.type === "MultiPolygon") {
+              const coords = (f.geometry.type === "LineString") 
+                ? f.geometry.coordinates 
+                : (f.geometry.type === "Polygon" || f.geometry.type === "MultiLineString")
+                ? f.geometry.coordinates.flat(1)
+                : f.geometry.coordinates.flat(2);
+                
+              for (const c of coords) {
+                 if (Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number') {
+                   const cPx = m.project(c as [number, number]);
+                   const dist = Math.hypot(cPx.x - ptPx.x, cPx.y - ptPx.y);
+                   if (dist < closestDist && dist <= radius) {
+                      closestDist = dist;
+                      closestPt = c as [number, number];
+                   }
+                 }
+              }
+            }
+          }
+          if (closestPt) snappedLngLat = closestPt;
+        }
+        
+        mousePosRef.current = snappedLngLat;
         const pts = penPointsRef.current;
 
         if (pts.length >= 3) {
@@ -624,6 +669,76 @@ export function MapContainer({
       // ── Vertex drag ───────────────────────────────────────────────────
       m.on("mouseenter", "edit-handles", () => { m.getCanvas().style.cursor = "grab"; });
       m.on("mouseleave", "edit-handles", () => { m.getCanvas().style.cursor = ""; });
+
+      m.on("contextmenu", "edit-handles", (e: any) => {
+        e.preventDefault();
+        if (!e.features?.length || !editGeometryRef.current) return;
+        const idx = e.features[0].properties.index as number;
+        const coords = [...editGeometryRef.current.coordinates[0]] as [number, number][];
+        
+        if (coords.length <= 4) {
+          alert("A polygon must have at least 3 anchor points.");
+          return;
+        }
+        
+        coords.splice(idx, 1);
+        if (idx === 0) coords[coords.length - 1] = coords[0];
+        
+        const newGeom = { ...editGeometryRef.current, coordinates: [coords] };
+        editGeometryRef.current = newGeom;
+        (m.getSource("edit-verts") as MapLibreTypes.GeoJSONSource)?.setData({
+          type: "FeatureCollection",
+          features: [
+            { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: { type: "ring" } },
+            ...coords.slice(0, -1).map((c: [number, number], i: number) => ({
+              type: "Feature", geometry: { type: "Point", coordinates: c }, properties: { index: i },
+            })),
+          ],
+        } as any);
+      });
+
+      m.on("click", "edit-ring", (e: any) => {
+        e.originalEvent.stopPropagation();
+        if (!editGeometryRef.current) return;
+        const pt = [e.lngLat.lng, e.lngLat.lat] as [number, number];
+        const coords = [...editGeometryRef.current.coordinates[0]] as [number, number][];
+        
+        let closestIdx = 0;
+        let minDist = Infinity;
+        const ptPx = m.project(pt);
+        
+        const distToSegmentSq = (p: {x:number, y:number}, v: {x:number, y:number}, w: {x:number, y:number}) => {
+          const l2 = (w.x - v.x)**2 + (w.y - v.y)**2;
+          if (l2 === 0) return (p.x - v.x)**2 + (p.y - v.y)**2;
+          let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+          t = Math.max(0, Math.min(1, t));
+          return (p.x - (v.x + t * (w.x - v.x)))**2 + (p.y - (v.y + t * (w.y - v.y)))**2;
+        };
+
+        for (let i = 0; i < coords.length - 1; i++) {
+          const v = m.project(coords[i]);
+          const w = m.project(coords[i+1]);
+          const d = distToSegmentSq(ptPx, v, w);
+          if (d < minDist) {
+            minDist = d;
+            closestIdx = i;
+          }
+        }
+        
+        coords.splice(closestIdx + 1, 0, pt);
+        const newGeom = { ...editGeometryRef.current, coordinates: [coords] };
+        editGeometryRef.current = newGeom;
+        
+        (m.getSource("edit-verts") as MapLibreTypes.GeoJSONSource)?.setData({
+          type: "FeatureCollection",
+          features: [
+            { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: { type: "ring" } },
+            ...coords.slice(0, -1).map((c: [number, number], i: number) => ({
+              type: "Feature", geometry: { type: "Point", coordinates: c }, properties: { index: i },
+            })),
+          ],
+        } as any);
+      });
 
       m.on("mousedown", "edit-handles", (e: any) => {
         e.preventDefault();
@@ -966,6 +1081,20 @@ export function MapContainer({
             </svg>
           </button>
 
+          {/* Magnet Mode */}
+          <button
+            title="Magnet Mode (Snap to Roads) - Automatically snaps your pen to nearest roads/boundaries"
+            onClick={() => setIsMagnetMode(!isMagnetMode)}
+            className={`w-9 h-9 flex items-center justify-center rounded-lg shadow-md border transition-all ${
+              isMagnetMode ? "bg-amber-500 text-white border-amber-600" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15"/>
+              <path d="m5 8 4 4"/><path d="m12 15 4 4"/>
+            </svg>
+          </button>
+
           {/* Pen */}
           <button
             title="Pen Tool — Click to add anchor points, click first point to close"
@@ -1092,9 +1221,9 @@ export function MapContainer({
       )}
 
       {editingAreaId && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-amber-600 text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg z-10 flex items-center gap-2.5 pointer-events-none">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-amber-600 text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg z-10 flex items-center gap-2.5 pointer-events-none whitespace-nowrap">
           <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-          Drag the yellow handles to reposition anchor points
+          Drag handles to move • Click line to add • Right-click handle to delete
         </div>
       )}
     </div>

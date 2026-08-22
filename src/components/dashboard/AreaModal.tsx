@@ -57,7 +57,7 @@ export function AreaModal({
       setGroupId(initialData?.group_id || "");
       
       if (initialData?.id) {
-        const assignment = activeAssignments.find((a: any) => a.area_id === initialData.id);
+        const assignment = activeAssignments?.find((a: any) => a.area_id === initialData.id);
         setPublisherId(assignment ? assignment.publisher_id : "unassigned");
       } else {
         setPublisherId("unassigned");
@@ -65,14 +65,16 @@ export function AreaModal({
       
       setError(null);
     }
-  }, [isOpen, initialData, activeAssignments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialData?.id]); // Only reset when opening or changing the specific area being edited
 
   // Auto-select first group when groups load and nothing selected
   useEffect(() => {
-    if (isOpen && !groupId && groups.length > 0) {
+    if (isOpen && !groupId && groups?.length > 0) {
       setGroupId(groups[0].id);
     }
-  }, [isOpen, groups, groupId]);
+  }, [isOpen, groups?.length]); // Only depend on length to avoid infinite re-renders
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

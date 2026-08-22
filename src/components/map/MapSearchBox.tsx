@@ -38,9 +38,10 @@ export function MapSearchBox() {
         id: "search-boundary-fill",
         type: "fill",
         source: "search-boundary",
+        filter: ["!=", ["geometry-type"], "Point"],
         paint: {
           "fill-color": "#f43f5e",
-          "fill-opacity": 0.1
+          "fill-opacity": 0.15
         }
       });
       
@@ -48,10 +49,24 @@ export function MapSearchBox() {
         id: "search-boundary-line",
         type: "line",
         source: "search-boundary",
+        filter: ["!=", ["geometry-type"], "Point"],
         paint: {
           "line-color": "#f43f5e",
           "line-width": 3,
           "line-dasharray": [2, 2]
+        }
+      });
+
+      map.addLayer({
+        id: "search-boundary-point",
+        type: "circle",
+        source: "search-boundary",
+        filter: ["==", ["geometry-type"], "Point"],
+        paint: {
+          "circle-radius": 8,
+          "circle-color": "#f43f5e",
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff"
         }
       });
     }
@@ -59,7 +74,10 @@ export function MapSearchBox() {
     const source = map.getSource("search-boundary") as any;
     if (source) {
       if (feature) {
-        source.setData(feature);
+        source.setData({
+          type: "FeatureCollection",
+          features: [feature]
+        });
       } else {
         source.setData({ type: "FeatureCollection", features: [] });
       }

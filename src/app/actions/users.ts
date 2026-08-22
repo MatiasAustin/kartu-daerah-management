@@ -34,7 +34,9 @@ export async function inviteManagerAction(formData: FormData) {
     }
 
     const projectId = groupData.project_id;
-    const ownerId = (groupData.projects as any).owner_id;
+    // Handle both array (if Supabase types it wrong) or object
+    const projectsRef = groupData.projects as any;
+    const ownerId = Array.isArray(projectsRef) ? projectsRef[0]?.owner_id : projectsRef?.owner_id;
 
     if (ownerId !== user.id) {
       // Check if they are a project admin
