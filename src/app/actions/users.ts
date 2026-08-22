@@ -22,36 +22,51 @@ export async function inviteManagerAction(formData: FormData) {
       return { error: "Unauthorized" };
     }
 
+    // Verify ownership of the group's project
+    const { data: groupData } = await supabase
+      .from("groups")
+      .select("projects!inner(owner_id)")
+      .eq("id", groupId)
+      .single();
+
+    if (!groupData || groupData.projects.owner_id !== user.id) {
+      return { error: "Unauthorized: You do not own this project." };
+    }
+
     // 2. Initialize Admin Client
     const adminAuthClient = createAdminClient();
 
-    // 3. Invite the user
     let invitedUserId = "";
-    const { data: inviteData, error: inviteError } = await adminAuthClient.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName },
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
-    });
 
-    if (inviteError) {
-      if (inviteError.status === 422 || inviteError.message.includes("registered")) {
-        // User already exists, try to get their ID from profiles
-        const { data: existingProfile } = await supabase.from('profiles').select('id').eq('email', email).single();
-        if (existingProfile) {
-          invitedUserId = existingProfile.id;
-          // Update their profile name if it was provided
-          await supabase.from('profiles').update({ full_name: fullName }).eq('id', invitedUserId);
-        } else {
-          return { error: `User is already registered but profile missing. Cannot assign.` };
+    // 3. First, check if the user is already registered (has a profile)
+    const { data: existingProfile } = await adminAuthClient
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingProfile) {
+      invitedUserId = existingProfile.id;
+      // Update their profile name if it was provided
+      await adminAuthClient.from('profiles').update({ full_name: fullName }).eq('id', invitedUserId);
+    } else {
+      // 3b. If not registered, invite them
+      const { data: inviteData, error: inviteError } = await adminAuthClient.auth.admin.inviteUserByEmail(email, {
+        data: { full_name: fullName },
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+      });
+
+      if (inviteError) {
+        if (inviteError.status === 429) {
+           return { error: `Gagal mengirim undangan karena Supabase mencapai batas limit (Rate Limit). Coba lagi nanti atau minta user mendaftar sendiri.` };
         }
-      } else {
         return { error: `Failed to invite user: ${inviteError.message}` };
       }
-    } else {
       invitedUserId = inviteData.user.id;
     }
 
     // 4. Assign the user to the group managers
-    const { error: managerError } = await supabase
+    const { error: managerError } = await adminAuthClient
       .from("group_managers")
       .insert({
         group_id: groupId,
@@ -66,7 +81,7 @@ export async function inviteManagerAction(formData: FormData) {
     }
 
     // 5. Add default group permissions (view, create, edit, delete areas within this group)
-    const { error: permError } = await supabase
+    const { error: permError } = await adminAuthClient
       .from("group_permissions")
       .insert({
         group_id: groupId,

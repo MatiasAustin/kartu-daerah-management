@@ -30,7 +30,12 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      const errorMessage = error.message.includes("Invalid login credentials") 
+        ? "Email atau password yang Anda masukkan salah!" 
+        : error.message;
+      
+      setError(errorMessage);
+      alert(errorMessage);
       setIsLoading(false);
     } else {
       router.push("/dashboard/projects");
