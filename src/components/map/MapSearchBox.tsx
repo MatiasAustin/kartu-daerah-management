@@ -38,7 +38,6 @@ export function MapSearchBox() {
         id: "search-boundary-fill",
         type: "fill",
         source: "search-boundary",
-        filter: ["!=", ["geometry-type"], "Point"],
         paint: {
           "fill-color": "#f43f5e",
           "fill-opacity": 0.15
@@ -49,7 +48,6 @@ export function MapSearchBox() {
         id: "search-boundary-line",
         type: "line",
         source: "search-boundary",
-        filter: ["!=", ["geometry-type"], "Point"],
         paint: {
           "line-color": "#f43f5e",
           "line-width": 3,
@@ -61,7 +59,6 @@ export function MapSearchBox() {
         id: "search-boundary-point",
         type: "circle",
         source: "search-boundary",
-        filter: ["==", ["geometry-type"], "Point"],
         paint: {
           "circle-radius": 8,
           "circle-color": "#f43f5e",

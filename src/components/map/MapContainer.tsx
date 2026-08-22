@@ -16,7 +16,7 @@ if (typeof window !== "undefined") {
   maplibregl.setWorkerUrl("https://unpkg.com/maplibre-gl@6.3.0/dist/maplibre-gl-worker.mjs");
 }
 
-type ToolMode = "select" | "pen";
+type ToolMode = "select" | "pen" | "blob";
 
 // ─── EWKB decoder ────────────────────────────────────────────────────────────
 // Supabase/PostgREST returns PostGIS geometry columns as EWKB hex strings by
@@ -191,6 +191,7 @@ export function MapContainer({
   const [penPoints, setPenPoints] = useState<[number, number][]>([]);
   const penPointsRef = useRef<[number, number][]>([]);
   const mousePosRef = useRef<[number, number] | null>(null);
+  const isBrushingRef = useRef(false);
   const [isNearStart, setIsNearStart] = useState(false);
   const isNearStartRef = useRef(false);
 
@@ -206,6 +207,8 @@ export function MapContainer({
   const editingAreaIdRef = useRef<string | null>(null);
   const editGeometryRef = useRef<any>(null);
   const draggingVertexRef = useRef<number | null>(null);
+  const [editMode, setEditMode] = useState<"move" | "add" | "delete">("move");
+  const editModeRef = useRef<"move" | "add" | "delete">("move");
 
   const onAreaCreateRef = useRef(onAreaCreate);
   const onAreaUpdateRef = useRef(onAreaUpdate);
@@ -213,6 +216,7 @@ export function MapContainer({
   // ── Sync refs ───────────────────────────────────────────────────────────────
   useEffect(() => { toolModeRef.current = toolMode; }, [toolMode]);
   useEffect(() => { isMagnetModeRef.current = isMagnetMode; }, [isMagnetMode]);
+  useEffect(() => { editModeRef.current = editMode; }, [editMode]);
   useEffect(() => { onAreaUpdateRef.current = onAreaUpdate; }, [onAreaUpdate]);
   const areasRef = useRef(areas);
 
