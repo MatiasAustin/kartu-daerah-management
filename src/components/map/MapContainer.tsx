@@ -6,6 +6,7 @@ import type * as MapLibreTypes from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useMapStore } from "@/lib/store/mapStore";
 import { MapStyleToggle } from "./MapStyleToggle";
+import { MapSearchBox } from "./MapSearchBox";
 
 const CLEAN_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DETAILED_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
@@ -938,6 +939,7 @@ export function MapContainer({
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="relative w-full h-full">
+      <MapSearchBox />
       <MapStyleToggle />
       {/* Map GL canvas */}
       <div ref={mapContainer} className="w-full h-full" />
