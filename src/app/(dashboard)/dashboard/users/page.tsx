@@ -13,28 +13,43 @@ export default async function UsersPage() {
   }
 
   // Fetch projects owned by the current user
-  const { data: projects } = await supabase
+  const { data: ownedProjects } = await supabase
     .from("projects")
     .select("id, name")
     .eq("owner_id", session.user.id);
 
-  // Fetch groups owned by the current user's projects
-  const { data: groups } = await supabase
+  // Fetch projects where user is a co-owner/admin
+  const { data: adminProjectsResult } = await supabase
+    .from("project_admins")
+    .select("projects(id, name)")
+    .eq("user_id", session.user.id);
+
+  const adminProjects = adminProjectsResult?.map((p: any) => p.projects).filter(Boolean) || [];
+  
+  // Combine unique projects
+  const allProjects = [...(ownedProjects || []), ...adminProjects];
+  const uniqueProjectsMap = new Map(allProjects.map(p => [p.id, p]));
+  const projects = Array.from(uniqueProjectsMap.values());
+
+  const projectIds = projects.map(p => p.id);
+
+  // Fetch groups for these projects
+  const { data: groups } = projectIds.length > 0 ? await supabase
     .from("groups")
     .select("id, name, project_id, projects!inner(owner_id)")
-    .eq("projects.owner_id", session.user.id);
+    .in("project_id", projectIds) : { data: [] };
 
   // Fetch existing group managers
-  const { data: managersData, error: managersError } = await supabase
+  const { data: managersData, error: managersError } = projectIds.length > 0 ? await supabase
     .from("group_managers")
     .select(`
       id,
       user_id,
       created_at,
-      groups!inner(id, name, projects!inner(owner_id))
+      groups!inner(id, name, project_id, projects!inner(owner_id))
     `)
-    .eq("groups.projects.owner_id", session.user.id)
-    .order("created_at", { ascending: false });
+    .in("groups.project_id", projectIds)
+    .order("created_at", { ascending: false }) : { data: [], error: null };
 
   if (managersError) {
     console.error("Error fetching managers:", managersError);
@@ -64,7 +79,6 @@ export default async function UsersPage() {
   }
 
   // Fetch Publishers (Field Workers)
-  const projectIds = projects?.map(p => p.id) || [];
   let publishers: any[] = [];
   let areas: any[] = [];
   let activeAssignments: any[] = [];

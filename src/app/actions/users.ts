@@ -25,12 +25,29 @@ export async function inviteManagerAction(formData: FormData) {
     // Verify ownership of the group's project
     const { data: groupData } = await supabase
       .from("groups")
-      .select("projects!inner(owner_id)")
+      .select("project_id, projects!inner(owner_id)")
       .eq("id", groupId)
       .single();
 
-    if (!groupData || groupData.projects.owner_id !== user.id) {
-      return { error: "Unauthorized: You do not own this project." };
+    if (!groupData) {
+      return { error: "Group not found." };
+    }
+
+    const projectId = groupData.project_id;
+    const ownerId = (groupData.projects as any).owner_id;
+
+    if (ownerId !== user.id) {
+      // Check if they are a project admin
+      const { data: adminCheck } = await createAdminClient()
+        .from("project_admins")
+        .select("id")
+        .eq("project_id", projectId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!adminCheck) {
+        return { error: "Unauthorized: You do not own this project or act as admin." };
+      }
     }
 
     // 2. Initialize Admin Client
