@@ -4,6 +4,8 @@ import { InviteUserForm } from "./InviteUserForm";
 import { ManagerRow } from "./ManagerRow";
 import { PublisherManager } from "./PublisherManager";
 
+import { AdminManager } from "./AdminManager";
+
 export default async function UsersPage() {
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
@@ -17,6 +19,23 @@ export default async function UsersPage() {
     .from("projects")
     .select("id, name")
     .eq("owner_id", session.user.id);
+
+  const ownedProjectIds = ownedProjects?.map(p => p.id) || [];
+
+  // Fetch current admins for owned projects
+  const { data: adminsData } = ownedProjectIds.length > 0 ? await supabase
+    .from("project_admins")
+    .select("id, project_id, user_id, projects(name)")
+    .in("project_id", ownedProjectIds) : { data: [] };
+    
+  let admins = adminsData || [];
+  if (admins.length > 0) {
+    const { data: profiles } = await supabase.from("profiles").select("id, email, full_name").in("id", admins.map(a => a.user_id));
+    admins = admins.map(a => ({
+      ...a,
+      profiles: profiles?.find(p => p.id === a.user_id) || null
+    }));
+  }
 
   // Fetch projects where user is a co-owner/admin
   const { data: adminProjectsResult } = await supabase
@@ -127,6 +146,10 @@ export default async function UsersPage() {
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">User Management</h1>
         <p className="text-slate-500 mt-2">Invite users and assign them as area managers.</p>
       </div>
+
+      {(ownedProjects && ownedProjects.length > 0) && (
+        <AdminManager projects={ownedProjects} admins={admins} />
+      )}
 
       {adminProjects.length > 0 && (
         <InviteUserForm projects={adminProjects} groups={adminGroups || []} />

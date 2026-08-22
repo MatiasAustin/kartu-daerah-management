@@ -185,3 +185,51 @@ export async function updateUserProfileNameAction(userId: string, newName: strin
     return { error: err.message || "An unexpected error occurred" };
   }
 }
+
+export async function addProjectAdminAction(formData: FormData) {
+  const email = formData.get('email') as string;
+  const projectId = formData.get('projectId') as string;
+  if (!email || !projectId) return { error: 'Email and project are required.' };
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated' };
+    const { data: project } = await supabase.from('projects').select('owner_id').eq('id', projectId).single();
+    if (!project || project.owner_id !== user.id) return { error: 'Only the project owner can add co-owners.' };
+    
+    const adminAuthClient = createAdminClient();
+    const { data: profiles } = await adminAuthClient.from('profiles').select('id').eq('email', email).single();
+    if (!profiles?.id) return { error: 'User not found. They must sign up first.' };
+    
+    const { data: existingAdmin } = await adminAuthClient.from('project_admins').select('id').eq('project_id', projectId).eq('user_id', profiles.id).maybeSingle();
+    if (existingAdmin) return { error: 'User is already a co-owner.' };
+    
+    const { error: insertError } = await adminAuthClient.from('project_admins').insert({ project_id: projectId, user_id: profiles.id });
+    if (insertError) return { error: insertError.message };
+    
+    revalidatePath('/dashboard/users');
+    return { success: true, message: 'Co-owner added successfully!' };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
+export async function removeProjectAdminAction(adminId: string, projectId: string) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated' };
+    const { data: project } = await supabase.from('projects').select('owner_id').eq('id', projectId).single();
+    if (!project || project.owner_id !== user.id) return { error: 'Only the project owner can remove co-owners.' };
+    
+    const adminAuthClient = createAdminClient();
+    const { error } = await adminAuthClient.from('project_admins').delete().eq('id', adminId).eq('project_id', projectId);
+    if (error) return { error: error.message };
+    
+    revalidatePath('/dashboard/users');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
