@@ -23,6 +23,23 @@ export default async function ProjectsPage() {
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
 
+  // Fetch projects where they are a co-owner
+  const { data: coOwnedData } = await supabase
+    .from("project_admins")
+    .select("project_id")
+    .eq("user_id", user.id);
+  const coOwnedIds = (coOwnedData || []).map(row => row.project_id);
+
+  let coOwnedProjects: any[] = [];
+  if (coOwnedIds.length > 0) {
+    const { data } = await supabase
+      .from("projects")
+      .select("*")
+      .in("id", coOwnedIds)
+      .order("created_at", { ascending: false });
+    coOwnedProjects = data || [];
+  }
+
   // For Area Managers, they'll see projects where they manage a group.
   const { data: managedGroups } = await supabase
     .from("group_managers")
@@ -48,9 +65,16 @@ export default async function ProjectsPage() {
   const allProjectIds = new Set(ownedProjects?.map(p => p.id) || []);
   const projects = [...(ownedProjects || [])];
   
+  for (const p of coOwnedProjects) {
+    if (!allProjectIds.has(p.id)) {
+      projects.push({ ...p, isCoOwner: true });
+      allProjectIds.add(p.id);
+    }
+  }
+
   for (const mp of managerProjects) {
     if (!allProjectIds.has(mp.id)) {
-      projects.push(mp);
+      projects.push({ ...mp, isManager: true });
       allProjectIds.add(mp.id);
     }
   }

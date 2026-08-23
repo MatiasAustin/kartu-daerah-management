@@ -22,11 +22,25 @@ export default async function UsersPage() {
 
   const ownedProjectIds = ownedProjects?.map(p => p.id) || [];
 
-  // Fetch current admins for owned projects
-  const { data: adminsData } = ownedProjectIds.length > 0 ? await supabase
+  // Fetch projects where user is a co-owner/admin
+  const { data: adminProjectsResult } = await supabase
+    .from("project_admins")
+    .select("projects(id, name)")
+    .eq("user_id", session.user.id);
+
+  const adminProjectsArray = adminProjectsResult?.map((p: any) => p.projects).filter(Boolean) || [];
+  
+  // Combine unique projects for Admin access
+  const allAdminProjects = [...(ownedProjects || []), ...adminProjectsArray];
+  const uniqueAdminProjectsMap = new Map(allAdminProjects.map(p => [p.id, p]));
+  const adminProjects = Array.from(uniqueAdminProjectsMap.values());
+  const adminProjectIds = adminProjects.map(p => p.id);
+
+  // Fetch current admins for ALL admin projects
+  const { data: adminsData } = adminProjectIds.length > 0 ? await supabase
     .from("project_admins")
     .select("id, project_id, user_id, projects(name)")
-    .in("project_id", ownedProjectIds) : { data: [] };
+    .in("project_id", adminProjectIds) : { data: [] };
     
   let admins = adminsData || [];
   if (admins.length > 0) {
@@ -37,11 +51,7 @@ export default async function UsersPage() {
     }));
   }
 
-  // Fetch projects where user is a co-owner/admin
-  const { data: adminProjectsResult } = await supabase
-    .from("project_admins")
-    .select("projects(id, name)")
-    .eq("user_id", session.user.id);
+/* moved */
 
   // Fetch projects where user is just an area manager
   const { data: managedGroupsResult } = await supabase
@@ -49,14 +59,10 @@ export default async function UsersPage() {
     .select("groups!inner(projects!inner(id, name))")
     .eq("user_id", session.user.id);
 
-  const adminProjectsArray = adminProjectsResult?.map((p: any) => p.projects).filter(Boolean) || [];
+/* moved */
   const managerProjectsArray = managedGroupsResult?.map((g: any) => g.groups?.projects).filter(Boolean) || [];
   
-  // Combine unique projects for Admin access
-  const allAdminProjects = [...(ownedProjects || []), ...adminProjectsArray];
-  const uniqueAdminProjectsMap = new Map(allAdminProjects.map(p => [p.id, p]));
-  const adminProjects = Array.from(uniqueAdminProjectsMap.values());
-  const adminProjectIds = adminProjects.map(p => p.id);
+/* moved */
 
   // Combine unique projects for Manager (View only) access
   const uniqueManagerProjectsMap = new Map(managerProjectsArray.map((p: any) => [p.id, p]));

@@ -188,6 +188,8 @@ export function ProjectsList({ projects, currentUserId }: ProjectsListProps) {
                         <FolderKanban className="h-5 w-5 text-indigo-600" />
                       </div>
                       <span className="truncate">{project.name}</span>
+                      {(project as any).isCoOwner && <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-medium tracking-wide">Co-Owner</span>}
+                      {(project as any).isManager && <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium tracking-wide">Manager</span>}
                     </div>
                     {isOwner && (
                       <div onClick={(e) => e.stopPropagation()}>

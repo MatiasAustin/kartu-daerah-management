@@ -197,7 +197,13 @@ export async function addProjectAdminAction(formData: FormData) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Not authenticated' };
     const { data: project } = await supabase.from('projects').select('owner_id').eq('id', projectId).single();
-    if (!project || project.owner_id !== user.id) return { error: 'Only the project owner can add co-owners.' };
+    if (!project) return { error: 'Project not found.' };
+    
+    if (project.owner_id !== user.id) {
+      const adminAuthClient = createAdminClient();
+      const { data: adminCheck } = await adminAuthClient.from('project_admins').select('id').eq('project_id', projectId).eq('user_id', user.id).maybeSingle();
+      if (!adminCheck) return { error: 'Only the project owner or co-owners can add co-owners.' };
+    }
     
     const adminAuthClient = createAdminClient();
     const { data: profiles } = await adminAuthClient.from('profiles').select('id').eq('email', email).single();
@@ -222,7 +228,13 @@ export async function removeProjectAdminAction(adminId: string, projectId: strin
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: 'Not authenticated' };
     const { data: project } = await supabase.from('projects').select('owner_id').eq('id', projectId).single();
-    if (!project || project.owner_id !== user.id) return { error: 'Only the project owner can remove co-owners.' };
+    if (!project) return { error: 'Project not found.' };
+    
+    if (project.owner_id !== user.id) {
+      const adminAuthClient = createAdminClient();
+      const { data: adminCheck } = await adminAuthClient.from('project_admins').select('id').eq('project_id', projectId).eq('user_id', user.id).maybeSingle();
+      if (!adminCheck) return { error: 'Only the project owner or co-owners can remove co-owners.' };
+    }
     
     const adminAuthClient = createAdminClient();
     const { error } = await adminAuthClient.from('project_admins').delete().eq('id', adminId).eq('project_id', projectId);
