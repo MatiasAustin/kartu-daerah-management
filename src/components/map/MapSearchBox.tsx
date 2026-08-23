@@ -126,7 +126,7 @@ export function MapSearchBox() {
   };
 
   return (
-    <div ref={searchRef} className="absolute top-4 left-4 md:left-16 z-20 w-64 md:w-80">
+    <div ref={searchRef} className="absolute top-4 left-[72px] md:left-6 z-20 w-[calc(100vw-120px)] sm:w-64 md:w-80">
       <form onSubmit={handleSearch} className="relative flex items-center bg-white rounded-lg shadow-md border border-slate-200 overflow-hidden">
         <div className="pl-3 text-slate-400">
           <Search className="w-5 h-5" />
