@@ -230,6 +230,44 @@ export function MapContainer({
   // ─────────────────────────────────────────────────────────────────────────────
   // CANVAS PEN DRAWING (bypasses MapLibre GL layer ordering completely)
   // ─────────────────────────────────────────────────────────────────────────────
+
+  const getSnappedLngLat = (m: any, e: any, radius = 25): [number, number] => {
+    let snappedLngLat = [e.lngLat.lng, e.lngLat.lat] as [number, number];
+    if (!isMagnetModeRef.current) return snappedLngLat;
+    
+    const ptPx = e.point;
+    const features = m.queryRenderedFeatures(
+      [[ptPx.x - radius, ptPx.y - radius], [ptPx.x + radius, ptPx.y + radius]]
+    );
+    
+    let closestDist = Infinity;
+    let closestPt: [number, number] | null = null;
+    
+    for (const f of features) {
+      if (f.layer.id.includes("edit") || f.layer.id.includes("areas") || f.layer.id.includes("ref")) continue;
+      
+      if (f.geometry?.type === "LineString" || f.geometry?.type === "MultiLineString" || f.geometry?.type === "Polygon" || f.geometry?.type === "MultiPolygon") {
+        const coords = (f.geometry.type === "LineString") 
+          ? f.geometry.coordinates 
+          : (f.geometry.type === "Polygon" || f.geometry.type === "MultiLineString")
+          ? f.geometry.coordinates.flat(1)
+          : f.geometry.coordinates.flat(2);
+          
+        for (const c of coords) {
+           if (Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number') {
+             const cPx = m.project(c as [number, number]);
+             const dist = Math.hypot(cPx.x - ptPx.x, cPx.y - ptPx.y);
+             if (dist < closestDist && dist <= radius) {
+                closestDist = dist;
+                closestPt = c as [number, number];
+             }
+           }
+        }
+      }
+    }
+    return closestPt || snappedLngLat;
+  };
+
   const drawPenCanvas = useCallback(() => {
     const canvas = overlayCanvas.current;
     const m = map.current;
@@ -609,41 +647,7 @@ export function MapContainer({
         
         let snappedLngLat = [e.lngLat.lng, e.lngLat.lat] as [number, number];
         
-        if (isMagnetModeRef.current) {
-          const ptPx = e.point;
-          const radius = 25;
-          const features = m.queryRenderedFeatures(
-            [[ptPx.x - radius, ptPx.y - radius], [ptPx.x + radius, ptPx.y + radius]]
-          );
-          
-          let closestDist = Infinity;
-          let closestPt: [number, number] | null = null;
-          
-          for (const f of features) {
-            // Ignore own layers
-            if (f.layer.id.includes("edit") || f.layer.id.includes("areas") || f.layer.id.includes("ref")) continue;
-            
-            if (f.geometry?.type === "LineString" || f.geometry?.type === "MultiLineString" || f.geometry?.type === "Polygon" || f.geometry?.type === "MultiPolygon") {
-              const coords = (f.geometry.type === "LineString") 
-                ? f.geometry.coordinates 
-                : (f.geometry.type === "Polygon" || f.geometry.type === "MultiLineString")
-                ? f.geometry.coordinates.flat(1)
-                : f.geometry.coordinates.flat(2);
-                
-              for (const c of coords) {
-                 if (Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number') {
-                   const cPx = m.project(c as [number, number]);
-                   const dist = Math.hypot(cPx.x - ptPx.x, cPx.y - ptPx.y);
-                   if (dist < closestDist && dist <= radius) {
-                      closestDist = dist;
-                      closestPt = c as [number, number];
-                   }
-                 }
-              }
-            }
-          }
-          if (closestPt) snappedLngLat = closestPt;
-        }
+        snappedLngLat = getSnappedLngLat(m, e);
         
         mousePosRef.current = snappedLngLat;
         const pts = penPointsRef.current;
@@ -671,7 +675,10 @@ export function MapContainer({
       });
 
       // ── Vertex drag ───────────────────────────────────────────────────
-      m.on("mouseenter", "edit-handles", () => { m.getCanvas().style.cursor = "grab"; });
+      m.on("mouseenter", "edit-handles", () => {
+    if (editModeRef.current === "move") m.getCanvas().style.cursor = "grab";
+    else if (editModeRef.current === "delete") m.getCanvas().style.cursor = "pointer";
+  });
       m.on("mouseleave", "edit-handles", () => { m.getCanvas().style.cursor = ""; });
 
       m.on("contextmenu", "edit-handles", (e: any) => {
@@ -744,7 +751,83 @@ export function MapContainer({
         } as any);
       });
 
+      
+      m.on("click", "edit-handles", (e: any) => {
+        if (editModeRef.current !== "delete") return;
+        e.preventDefault();
+        if (!e.features?.length || !editGeometryRef.current) return;
+        
+        const idx = e.features[0].properties.index as number;
+        const coords = [...editGeometryRef.current.coordinates[0]] as [number, number][];
+        
+        if (coords.length <= 4) {
+          alert("A polygon must have at least 3 anchor points.");
+          return;
+        }
+        
+        coords.splice(idx, 1);
+        coords[coords.length - 1] = coords[0]; // ensure ring closure
+        
+        editGeometryRef.current.coordinates = [coords];
+
+        const updateLayers = (geom: any) => {
+          if (!geom || !m.getSource("edit-verts")) return;
+          const coords = geom.coordinates[0] as [number, number][];
+          const verts = coords.slice(0, -1);
+          const features: any[] = [
+            { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: { type: "ring" } },
+            ...verts.map((c, i) => ({ type: "Feature", geometry: { type: "Point", coordinates: c }, properties: { index: i } })),
+          ];
+          (m.getSource("edit-verts") as MapLibreTypes.GeoJSONSource)?.setData({ type: "FeatureCollection", features } as any);
+        };
+
+        updateLayers(editGeometryRef.current);
+        if (onAreaUpdateRef.current) onAreaUpdateRef.current(editingAreaIdRef.current!, {
+          geometry: editGeometryRef.current,
+          geojson: { type: "Polygon", coordinates: [coords] }
+        });
+      });
+
+      
+      m.on("click", "edit-handles", (e: any) => {
+        if (editModeRef.current !== "delete") return;
+        e.preventDefault();
+        if (!e.features?.length || !editGeometryRef.current) return;
+        
+        const idx = e.features[0].properties.index as number;
+        const coords = [...editGeometryRef.current.coordinates[0]] as [number, number][];
+        
+        if (coords.length <= 4) {
+          alert("A polygon must have at least 3 anchor points.");
+          return;
+        }
+        
+        coords.splice(idx, 1);
+        coords[coords.length - 1] = coords[0]; // ensure ring closure
+        
+        editGeometryRef.current.coordinates = [coords];
+
+        const updateLayers = (geom: any) => {
+          if (!geom || !m.getSource("edit-verts")) return;
+          const coords = geom.coordinates[0] as [number, number][];
+          const verts = coords.slice(0, -1);
+          const features: any[] = [
+            { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: { type: "ring" } },
+            ...verts.map((c, i) => ({ type: "Feature", geometry: { type: "Point", coordinates: c }, properties: { index: i } })),
+          ];
+          (m.getSource("edit-verts") as MapLibreTypes.GeoJSONSource)?.setData({ type: "FeatureCollection", features } as any);
+        };
+
+        updateLayers(editGeometryRef.current);
+        if (onAreaUpdateRef.current) onAreaUpdateRef.current(editingAreaIdRef.current!, {
+          geometry: editGeometryRef.current,
+          geojson: { type: "Polygon", coordinates: [coords] }
+        });
+      });
+
       m.on("mousedown", "edit-handles", (e: any) => {
+        if (editModeRef.current !== "move") return;
+        if (editModeRef.current !== "move") return;
         e.preventDefault();
         if (!e.features?.length) return;
         const idx = e.features[0].properties.index as number;
@@ -1099,6 +1182,32 @@ export function MapContainer({
             </svg>
           </button>
 
+          
+          {/* Blob Tool */}
+          <button
+            title="Brush Tool (Arsir) - Click and drag to draw continuously"
+            onClick={() => setToolMode(toolMode === "blob" ? "select" : "blob")}
+            className={`w-9 h-9 flex items-center justify-center rounded-lg shadow-md border transition-all
+              ${toolMode === "blob" ? "bg-indigo-600 text-white border-indigo-700" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/>
+            </svg>
+          </button>
+
+          
+          {/* Blob Tool */}
+          <button
+            title="Brush Tool (Arsir) - Click and drag to draw continuously"
+            onClick={() => setToolMode(toolMode === "blob" ? "select" : "blob")}
+            className={`w-9 h-9 flex items-center justify-center rounded-lg shadow-md border transition-all
+              ${toolMode === "blob" ? "bg-indigo-600 text-white border-indigo-700" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/>
+            </svg>
+          </button>
+
           {/* Pen */}
           <button
             title="Pen Tool — Click to add anchor points, click first point to close"
@@ -1208,7 +1317,73 @@ export function MapContainer({
         </div>
       )}
 
-      {/* Status bar */}
+      
+        {/* EDIT TOOLBAR (Shown only when an area is selected) */}
+        {selectedAreaId && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex bg-white rounded-lg shadow-md border border-slate-200 overflow-hidden z-20">
+            <button
+              title="Move Vertex"
+              onClick={() => setEditMode("move")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${editMode === "move" ? "bg-indigo-100 text-indigo-700" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M9 19l3 3 3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+              Move
+            </button>
+            <div className="w-px bg-slate-200"></div>
+            <button
+              title="Add Vertex"
+              onClick={() => setEditMode("add")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${editMode === "add" ? "bg-emerald-100 text-emerald-700" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              Add
+            </button>
+            <div className="w-px bg-slate-200"></div>
+            <button
+              title="Delete Vertex"
+              onClick={() => setEditMode("delete")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${editMode === "delete" ? "bg-red-100 text-red-700" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>
+              Delete
+            </button>
+          </div>
+        )}
+
+        
+        {/* EDIT TOOLBAR (Shown only when an area is selected) */}
+        {selectedAreaId && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex bg-white rounded-lg shadow-md border border-slate-200 overflow-hidden z-20">
+            <button
+              title="Move Vertex"
+              onClick={() => setEditMode("move")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${editMode === "move" ? "bg-indigo-100 text-indigo-700" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M9 19l3 3 3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+              Move
+            </button>
+            <div className="w-px bg-slate-200"></div>
+            <button
+              title="Add Vertex"
+              onClick={() => setEditMode("add")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${editMode === "add" ? "bg-emerald-100 text-emerald-700" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              Add
+            </button>
+            <div className="w-px bg-slate-200"></div>
+            <button
+              title="Delete Vertex"
+              onClick={() => setEditMode("delete")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${editMode === "delete" ? "bg-red-100 text-red-700" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>
+              Delete
+            </button>
+          </div>
+        )}
+
+        {/* Status bar */}
       {toolMode === "pen" && (
         <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg z-10 flex items-center gap-2.5 pointer-events-none select-none
           ${isNearStart && penPoints.length >= 3 ? "bg-emerald-600" : "bg-indigo-700"}`}
