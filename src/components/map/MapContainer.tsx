@@ -215,6 +215,22 @@ export function MapContainer({
 
   // ── Sync refs ───────────────────────────────────────────────────────────────
   useEffect(() => { toolModeRef.current = toolMode; }, [toolMode]);
+
+  useEffect(() => {
+    if (!map.current) return;
+    const canvas = map.current.getCanvas();
+    if (toolMode === "pen") {
+      canvas.style.cursor = "crosshair";
+      map.current.dragPan.disable();
+    } else if (toolMode === "blob") {
+      canvas.style.cursor = "crosshair";
+      map.current.dragPan.disable();
+    } else {
+      canvas.style.cursor = "grab";
+      map.current.dragPan.enable();
+    }
+  }, [toolMode, mapLoaded]);
+
   useEffect(() => { isMagnetModeRef.current = isMagnetMode; }, [isMagnetMode]);
   useEffect(() => { editModeRef.current = editMode; }, [editMode]);
   useEffect(() => { onAreaUpdateRef.current = onAreaUpdate; }, [onAreaUpdate]);
@@ -833,7 +849,7 @@ export function MapContainer({
         const idx = e.features[0].properties.index as number;
         draggingVertexRef.current = idx;
         m.getCanvas().style.cursor = "grabbing";
-        m.dragPan.disable();
+        
 
         const onMove = (mv: MapLibreTypes.MapMouseEvent) => {
           if (draggingVertexRef.current === null || !editGeometryRef.current) return;
@@ -856,7 +872,7 @@ export function MapContainer({
         const onUp = () => {
           m.off("mousemove", onMove as any);
           m.off("mouseup", onUp);
-          m.dragPan.enable();
+          
           m.getCanvas().style.cursor = "grab";
           draggingVertexRef.current = null;
         };
@@ -1190,22 +1206,7 @@ export function MapContainer({
             className={`w-9 h-9 flex items-center justify-center rounded-lg shadow-md border transition-all
               ${toolMode === "blob" ? "bg-indigo-600 text-white border-indigo-700" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/>
-            </svg>
-          </button>
-
-          
-          {/* Blob Tool */}
-          <button
-            title="Brush Tool (Arsir) - Click and drag to draw continuously"
-            onClick={() => setToolMode(toolMode === "blob" ? "select" : "blob")}
-            className={`w-9 h-9 flex items-center justify-center rounded-lg shadow-md border transition-all
-              ${toolMode === "blob" ? "bg-indigo-600 text-white border-indigo-700" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg>
           </button>
 
           {/* Pen */}
