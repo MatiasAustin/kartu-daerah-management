@@ -103,7 +103,7 @@ export function MapSearchBox() {
     setLoading(false);
   };
 
-  const selectResult = (feature: any) => {
+  const selectResult = (feature: any) => {\n    console.log(\'Selected feature:\', feature);\n    if (!feature.geometry) console.warn(\'NO GEOMETRY IN FEATURE\');
     setIsOpen(false);
     
     // Draw boundary on map
