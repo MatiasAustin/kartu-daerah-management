@@ -87,11 +87,17 @@ export function MapSearchBox() {
     setLoading(true);
     setIsOpen(true);
     try {
-      // Fetch from Nominatim
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=geojson&polygon_geojson=1&limit=5`);
+      // Fetch from Nominatim - increased limit to 10 to have better chances of finding administrative boundaries (Polygons) instead of just points
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=geojson&polygon_geojson=1&limit=10`);
       const data = await res.json();
       if (data && data.features) {
-        setResults(data.features);
+        // Prioritize polygons/multipolygons over points if they have similar names
+        const sorted = data.features.sort((a: any, b: any) => {
+          const aIsPoly = a.geometry?.type?.includes("Polygon") ? 1 : 0;
+          const bIsPoly = b.geometry?.type?.includes("Polygon") ? 1 : 0;
+          return bIsPoly - aIsPoly;
+        });
+        setResults(sorted);
       } else {
         setResults([]);
       }
@@ -162,8 +168,13 @@ export function MapSearchBox() {
                     className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-start gap-3 border-b border-slate-100 last:border-0"
                   >
                     <MapPin className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium text-slate-800 line-clamp-1">{r.properties?.name || r.properties?.display_name.split(",")[0]}</div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm font-medium text-slate-800 line-clamp-1">{r.properties?.name || r.properties?.display_name.split(",")[0]}</div>
+                        {r.geometry?.type?.includes("Polygon") && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-sm whitespace-nowrap">Area / Batas</span>
+                        )}
+                      </div>
                       <div className="text-xs text-slate-500 line-clamp-2">{r.properties?.display_name}</div>
                     </div>
                   </button>

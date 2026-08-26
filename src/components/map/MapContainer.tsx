@@ -196,10 +196,10 @@ export function MapContainer({
   const isNearStartRef = useRef(false);
 
   // ── Style state ─────────────────────────────────────────────────────────────
-  const [fillOpacity, setFillOpacity] = useState(0.3);
+  const [fillOpacity, setFillOpacity] = useState(0);
   const [lineWidth, setLineWidth] = useState(2);
   const [showStylePanel, setShowStylePanel] = useState(false);
-  const fillOpacityRef = useRef(0.3);
+  const fillOpacityRef = useRef(0);
   const lineWidthRef = useRef(2);
 
   // ── Vertex edit state ───────────────────────────────────────────────────────
@@ -221,10 +221,10 @@ export function MapContainer({
     const canvas = map.current.getCanvas();
     if (toolMode === "pen") {
       canvas.style.cursor = "crosshair";
-      map.current.dragPan.disable();
+      map.current.dragPan.enable(); // Allow panning while using pen tool
     } else if (toolMode === "blob") {
       canvas.style.cursor = "crosshair";
-      map.current.dragPan.disable();
+      map.current.dragPan.disable(); // Blob needs drag to draw
     } else {
       canvas.style.cursor = "grab";
       map.current.dragPan.enable();
@@ -841,21 +841,22 @@ export function MapContainer({
         });
       });
 
-      m.on("mousedown", "edit-handles", (e: any) => {
-        if (editModeRef.current !== "move") return;
+            const onVertexDown = (e: any) => {
         if (editModeRef.current !== "move") return;
         e.preventDefault();
         if (!e.features?.length) return;
         const idx = e.features[0].properties.index as number;
         draggingVertexRef.current = idx;
         m.getCanvas().style.cursor = "grabbing";
-        
+        m.dragPan.disable();
 
-        const onMove = (mv: MapLibreTypes.MapMouseEvent) => {
+        const onMove = (mv: any) => {
           if (draggingVertexRef.current === null || !editGeometryRef.current) return;
+          const lngLat = mv.lngLat;
+          if (!lngLat) return;
           const coords = [...editGeometryRef.current.coordinates[0]] as [number, number][];
-          coords[draggingVertexRef.current] = [mv.lngLat.lng, mv.lngLat.lat];
-          if (draggingVertexRef.current === 0) coords[coords.length - 1] = [mv.lngLat.lng, mv.lngLat.lat];
+          coords[draggingVertexRef.current] = [lngLat.lng, lngLat.lat];
+          if (draggingVertexRef.current === 0) coords[coords.length - 1] = [lngLat.lng, lngLat.lat];
           const newGeom = { ...editGeometryRef.current, coordinates: [coords] };
           editGeometryRef.current = newGeom;
           (m.getSource("edit-verts") as MapLibreTypes.GeoJSONSource)?.setData({
@@ -870,16 +871,23 @@ export function MapContainer({
         };
 
         const onUp = () => {
-          m.off("mousemove", onMove as any);
+          m.off("mousemove", onMove);
+          m.off("touchmove", onMove);
           m.off("mouseup", onUp);
-          
+          m.off("touchend", onUp);
           m.getCanvas().style.cursor = "grab";
           draggingVertexRef.current = null;
+          m.dragPan.enable();
         };
 
-        m.on("mousemove", onMove as any);
+        m.on("mousemove", onMove);
+        m.on("touchmove", onMove);
         m.on("mouseup", onUp);
-      });
+        m.on("touchend", onUp);
+      };
+
+      m.on("mousedown", "edit-handles", onVertexDown);
+      m.on("touchstart", "edit-handles", onVertexDown);
     });
 
     map.current.on("style.load", () => {
