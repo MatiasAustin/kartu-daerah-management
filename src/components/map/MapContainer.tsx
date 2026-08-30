@@ -178,7 +178,7 @@ export function MapContainer({
   const overlayCanvas = useRef<HTMLCanvasElement>(null); // ← Canvas overlay for pen tool
   const map = useRef<MapLibreTypes.Map | null>(null);
   const mapStyle = useMapStore((state) => state.mapStyle);
-  const { setMap, setSelectedAreaId, selectedAreaId } = useMapStore();
+  const { setMap, setSelectedAreaId, selectedAreaId, mapProvider, maptilerKey, maptilerStyle } = useMapStore();
   
   const [mapLoaded, setMapLoaded] = useState(false);
   const [styleVersion, setStyleVersion] = useState(0);
@@ -470,9 +470,13 @@ export function MapContainer({
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
+    const initialStyle = mapProvider === "maptiler" && maptilerKey
+      ? `https://api.maptiler.com/maps/${maptilerStyle}/style.json?key=${maptilerKey}`
+      : mapStyle === "detailed" ? DETAILED_STYLE : CLEAN_STYLE;
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: mapStyle === "detailed" ? DETAILED_STYLE : CLEAN_STYLE,
+      style: initialStyle,
       center: [106.8272, -6.1751],
       zoom: 11,
     });
@@ -902,8 +906,13 @@ export function MapContainer({
   // ── Handle Style Changes ──────────────────────────────────────────────────
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
-    map.current.setStyle(mapStyle === "detailed" ? DETAILED_STYLE : CLEAN_STYLE);
-  }, [mapStyle, mapLoaded]);
+    
+    const nextStyle = mapProvider === "maptiler" && maptilerKey
+      ? `https://api.maptiler.com/maps/${maptilerStyle}/style.json?key=${maptilerKey}`
+      : mapStyle === "detailed" ? DETAILED_STYLE : CLEAN_STYLE;
+      
+    map.current.setStyle(nextStyle);
+  }, [mapStyle, mapLoaded, mapProvider, maptilerKey, maptilerStyle]);
 
   // ── Sync areas GeoJSON ────────────────────────────────────────────────────
   useEffect(() => {
