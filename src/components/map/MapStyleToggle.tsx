@@ -7,6 +7,8 @@ import { createPortal } from "react-dom";
 
 export function MapStyleToggle() {
   const mapStyle = useMapStore((state) => state.mapStyle);
+  const mapProvider = useMapStore((state) => state.mapProvider);
+  const maptilerStyle = useMapStore((state) => state.maptilerStyle);
   const toggleMapStyle = useMapStore((state) => state.toggleMapStyle);
   const [showTooltip, setShowTooltip] = useState(true);
   const [targetContainer, setTargetContainer] = useState<HTMLElement | null>(null);
@@ -58,7 +60,15 @@ export function MapStyleToggle() {
       title="Change Map Style"
     >
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
-        <Layers className={`w-[16px] h-[16px] ${mapStyle === "detailed" ? "text-indigo-600" : "text-slate-700"}`} strokeWidth={2.5} />
+        <Layers 
+          className={`w-[16px] h-[16px] ${
+            (mapProvider === "maptiler" && maptilerStyle !== "streets-v2") || 
+            (mapProvider === "existing" && mapStyle === "detailed") 
+              ? "text-indigo-600" 
+              : "text-slate-700"
+          }`} 
+          strokeWidth={2.5} 
+        />
       </div>
       
       {/* Animated Pop-up Tooltip */}

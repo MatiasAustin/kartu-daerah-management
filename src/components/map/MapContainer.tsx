@@ -1174,7 +1174,7 @@ export function MapContainer({
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="relative w-full h-full">
-      <MapSearchBox />
+      <MapSearchBox onConvert={onAreaCreate} />
       <MapStyleToggle />
       {/* Map GL canvas */}
       <div ref={mapContainer} className="w-full h-full" />

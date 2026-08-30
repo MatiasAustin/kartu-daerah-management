@@ -12,6 +12,10 @@ export function MapDataSourceClient() {
   const [selectedKey, setSelectedKey] = useState(maptilerKey || "");
   const [selectedStyle, setSelectedStyle] = useState(maptilerStyle || "streets-v2");
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+
+  useEffect(() => {
+    setSelectedStyle(maptilerStyle);
+  }, [maptilerStyle]);
   const [saveStatus, setSaveStatus] = useState(false);
   const supabase = createClient();
 

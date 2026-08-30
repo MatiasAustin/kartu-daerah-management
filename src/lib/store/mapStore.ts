@@ -39,7 +39,16 @@ export const useMapStore = create<MapState>()(
       setSelectedAreaId: (id) => set({ selectedAreaId: id }),
       setHoveredAreaId: (id) => set({ hoveredAreaId: id }),
       setDrawMode: (mode) => set({ drawMode: mode }),
-      toggleMapStyle: () => set((state) => ({ mapStyle: state.mapStyle === "clean" ? "detailed" : "clean" })),
+      toggleMapStyle: () => set((state) => {
+        if (state.mapProvider === "maptiler") {
+          const maptilerStyles = ["streets-v2", "satellite", "basic-v2", "outdoor-v2", "hybrid"];
+          const currentIndex = maptilerStyles.indexOf(state.maptilerStyle);
+          const nextIndex = (currentIndex + 1) % maptilerStyles.length;
+          return { maptilerStyle: maptilerStyles[nextIndex] };
+        } else {
+          return { mapStyle: state.mapStyle === "clean" ? "detailed" : "clean" };
+        }
+      }),
       setMapProvider: (provider) => set({ mapProvider: provider }),
       setMaptilerConfig: (key, style) => set({ maptilerKey: key, maptilerStyle: style }),
       

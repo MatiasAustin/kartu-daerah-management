@@ -6,16 +6,18 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { MapDataSourceClient } from "./MapDataSourceClient";
 import { ApiKeysClient } from "./ApiKeysClient";
+import { BoundaryImportClient } from "./BoundaryImportClient";
 
 export function SettingsClient({ user }: { user: any }) {
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
-  const [activeTab, setActiveTab] = useState<"general" | "map" | "keys">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "map" | "keys" | "boundaries">("general");
 
   const tabs = [
     { id: "general", label: "General", icon: Smartphone },
     { id: "map", label: "Map Data Source", icon: Map },
     { id: "keys", label: "API Keys", icon: Key },
+    { id: "boundaries", label: "Import Boundaries", icon: Globe },
   ] as const;
 
   return (
@@ -122,6 +124,7 @@ export function SettingsClient({ user }: { user: any }) {
 
         {activeTab === "map" && <MapDataSourceClient />}
         {activeTab === "keys" && <ApiKeysClient />}
+        {activeTab === "boundaries" && <BoundaryImportClient />}
 
         {/* Footer Branding */}
         <div className="mt-auto pt-8 flex flex-col items-center justify-center gap-1">

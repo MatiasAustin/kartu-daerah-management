@@ -1,0 +1,152 @@
+"use client";
+
+import { useState } from "react";
+import { Upload, FileJson, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+export function BoundaryImportClient() {
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [message, setMessage] = useState("");
+  const supabase = createClient();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+      setStatus("idle");
+    }
+  };
+
+  const processGeoJSON = async (geojson: any) => {
+    if (!geojson.features || !Array.isArray(geojson.features)) {
+      throw new Error("Invalid GeoJSON: Missing features array");
+    }
+
+    let successCount = 0;
+    
+    // Batch processing to avoid overloading the browser
+    for (let i = 0; i < geojson.features.length; i++) {
+      const feature = geojson.features[i];
+      if (!feature.geometry) continue;
+
+      const name = feature.properties?.name || feature.properties?.NAME_3 || feature.properties?.NAMOBJ || `Boundary ${i+1}`;
+      const level = feature.properties?.level || feature.properties?.TYPE_3 || "Area";
+
+      const { error } = await supabase.rpc('insert_boundary_geojson', {
+        p_name: name,
+        p_level: level,
+        p_geojson: feature.geometry
+      });
+
+      if (!error) {
+        successCount++;
+      } else {
+        console.error("Error inserting feature", name, error);
+      }
+    }
+
+    return successCount;
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setLoading(true);
+    setStatus("idle");
+    setMessage("");
+
+    try {
+      const text = await file.text();
+      const geojson = JSON.parse(text);
+      
+      if (geojson.type !== "FeatureCollection") {
+        throw new Error("Only FeatureCollection GeoJSON is supported.");
+      }
+
+      const count = await processGeoJSON(geojson);
+      
+      setStatus("success");
+      setMessage(`Successfully imported ${count} boundaries.`);
+      setFile(null);
+    } catch (err: any) {
+      console.error(err);
+      setStatus("error");
+      setMessage(err.message || "Failed to process GeoJSON file");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <h3 className="text-lg font-semibold text-slate-900">Import Geo Boundaries</h3>
+        <p className="text-sm text-slate-500">
+          Upload a GeoJSON file containing administrative boundaries (e.g., from peta-indonesia-geojson).
+          These boundaries will be saved to the database and can be searched and converted to Area Markings.
+        </p>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+        <div className="border-2 border-dashed border-slate-200 rounded-lg p-10 flex flex-col items-center justify-center text-center">
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-full mb-4">
+            <FileJson className="w-8 h-8" />
+          </div>
+          <h4 className="text-sm font-medium text-slate-900 mb-1">Select GeoJSON File</h4>
+          <p className="text-xs text-slate-500 mb-6 max-w-xs">
+            Upload a .geojson file containing a FeatureCollection of polygons or multipolygons.
+          </p>
+          
+          <input 
+            type="file" 
+            id="file-upload" 
+            accept=".geojson,application/geo+json,application/json" 
+            className="hidden" 
+            onChange={handleFileChange}
+          />
+          <label 
+            htmlFor="file-upload" 
+            className="cursor-pointer px-4 py-2 bg-white border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+          >
+            Browse Files
+          </label>
+        </div>
+
+        {file && (
+          <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <FileJson className="w-5 h-5 text-indigo-500 shrink-0" />
+              <span className="text-sm font-medium text-slate-700 truncate">{file.name}</span>
+              <span className="text-xs text-slate-500 shrink-0">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+            </div>
+            <button 
+              onClick={handleUpload}
+              disabled={loading}
+              className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 flex items-center gap-2 shrink-0"
+            >
+              {loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Importing...</>
+              ) : (
+                <><Upload className="w-4 h-4" /> Import Data</>
+              )}
+            </button>
+          </div>
+        )}
+
+        {status === "success" && (
+          <div className="mt-4 p-4 bg-emerald-50 text-emerald-700 rounded-lg flex items-start gap-3 border border-emerald-100">
+            <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-sm font-medium">{message}</div>
+          </div>
+        )}
+        
+        {status === "error" && (
+          <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-start gap-3 border border-red-100">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-sm font-medium">{message}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
