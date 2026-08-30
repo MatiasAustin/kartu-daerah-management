@@ -345,7 +345,7 @@ export function ProjectWorkspace({
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-6">
           {/* GROUPS */}
           <div>
@@ -525,7 +525,7 @@ export function ProjectWorkspace({
             </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </>
   );
 
@@ -543,7 +543,7 @@ export function ProjectWorkspace({
           <SheetTrigger className="shadow-lg rounded-full flex items-center justify-center h-12 w-12 p-0 bg-white text-slate-900 border border-slate-200 hover:bg-slate-50">
             <ListFilter className="h-5 w-5" />
           </SheetTrigger>
-          <SheetContent side="left" className="w-[85vw] sm:w-80 p-0 flex flex-col bg-white">
+          <SheetContent side="left" className="w-[85vw] sm:w-80 p-0 flex flex-col h-full bg-white">
             <SheetTitle className="sr-only">Areas List</SheetTitle>
             <SheetDescription className="sr-only">Browse project areas</SheetDescription>
             <SidebarContent />
@@ -586,7 +586,7 @@ export function ProjectWorkspace({
                 <div className="max-h-[35vh] md:max-h-none flex flex-col">
                   <div className="h-1 w-12 bg-slate-200 rounded-full mx-auto mt-2 md:hidden shrink-0" />
                   <div className="h-2 w-full mt-2 md:mt-0 shrink-0" style={{ backgroundColor: group?.color || "#cbd5e1" }} />
-                  <ScrollArea className="p-5 overflow-y-auto flex-1">
+                  <div className="p-5 overflow-y-auto flex-1">
                     <div className="flex justify-between items-start mb-1">
                       <span className="text-xs font-semibold text-slate-500 tracking-wider uppercase">Area {selectedArea.area_number}</span>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full hidden md:inline-flex" onClick={() => setSelectedAreaId(null)}>×</Button>
@@ -677,7 +677,7 @@ export function ProjectWorkspace({
                         </Button>
                       </div>
                     </div>
-                  </ScrollArea>
+                  </div>
                 </div>
               );
             })()}

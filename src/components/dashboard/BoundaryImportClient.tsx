@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Upload, FileJson, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import * as shp from "shpjs";
 
 export function BoundaryImportClient() {
   const [file, setFile] = useState<File | null>(null);
@@ -56,11 +57,27 @@ export function BoundaryImportClient() {
     setMessage("");
 
     try {
-      const text = await file.text();
-      const geojson = JSON.parse(text);
+      let geojson: any;
+
+      if (file.name.toLowerCase().endsWith(".zip")) {
+        const buffer = await file.arrayBuffer();
+        geojson = await shp.parseZip(buffer);
+        
+        // shpjs might return an array of FeatureCollections if the zip contains multiple shapefiles
+        if (Array.isArray(geojson)) {
+          // Flatten into a single FeatureCollection
+          geojson = {
+            type: "FeatureCollection",
+            features: geojson.flatMap((g: any) => g.features || [])
+          };
+        }
+      } else {
+        const text = await file.text();
+        geojson = JSON.parse(text);
+      }
       
       if (geojson.type !== "FeatureCollection") {
-        throw new Error("Only FeatureCollection GeoJSON is supported.");
+        throw new Error("Only FeatureCollection GeoJSON or valid Shapefile ZIPs are supported.");
       }
 
       const count = await processGeoJSON(geojson);
@@ -71,7 +88,7 @@ export function BoundaryImportClient() {
     } catch (err: any) {
       console.error(err);
       setStatus("error");
-      setMessage(err.message || "Failed to process GeoJSON file");
+      setMessage(err.message || "Failed to process file");
     } finally {
       setLoading(false);
     }
@@ -82,7 +99,7 @@ export function BoundaryImportClient() {
       <div>
         <h3 className="text-lg font-semibold text-slate-900">Import Geo Boundaries</h3>
         <p className="text-sm text-slate-500">
-          Upload a GeoJSON file containing administrative boundaries (e.g., from peta-indonesia-geojson).
+          Upload a GeoJSON file (.geojson) or a zipped Shapefile (.zip) containing administrative boundaries.
           These boundaries will be saved to the database and can be searched and converted to Area Markings.
         </p>
       </div>
@@ -92,15 +109,18 @@ export function BoundaryImportClient() {
           <div className="p-3 bg-indigo-50 text-indigo-600 rounded-full mb-4">
             <FileJson className="w-8 h-8" />
           </div>
-          <h4 className="text-sm font-medium text-slate-900 mb-1">Select GeoJSON File</h4>
-          <p className="text-xs text-slate-500 mb-6 max-w-xs">
-            Upload a .geojson file containing a FeatureCollection of polygons or multipolygons.
+          <h4 className="text-sm font-medium text-slate-900 mb-1">Select GeoJSON or ZIP File</h4>
+          <p className="text-xs text-slate-500 mb-2 max-w-xs">
+            Upload a .geojson file or a .zip file containing ESRI Shapefiles (.shp, .shx, .dbf, .prj).
           </p>
+          <div className="bg-amber-50 text-amber-700 text-[10px] p-2 rounded border border-amber-200 mb-6 max-w-xs text-left">
+            <strong>Note:</strong> Very large files (e.g., &gt; 100MB Shapefiles) may crash your browser or take a long time to process. Consider splitting large datasets.
+          </div>
           
           <input 
             type="file" 
             id="file-upload" 
-            accept=".geojson,application/geo+json,application/json" 
+            accept=".geojson,.zip,application/geo+json,application/json,application/zip" 
             className="hidden" 
             onChange={handleFileChange}
           />

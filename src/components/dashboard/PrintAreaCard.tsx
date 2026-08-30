@@ -145,18 +145,25 @@ export function PrintAreaCard({ project, group, area, isPublicView = false }: Pr
           type: "fill",
           source: "print-area-source",
           paint: {
-            "fill-color": group?.color || "#ef4444",
-            "fill-opacity": 0.4
+            "fill-color": area.color || group?.color || "#ef4444",
+            "fill-opacity": 0
           }
         },
         {
           id: "print-area-outline",
           type: "line",
           source: "print-area-source",
-          paint: {
-            "line-color": group?.color || "#ef4444",
-            "line-width": 3
-          }
+          paint: (() => {
+            const dash = area.dash_array || group?.dash_array || "solid";
+            const paintProps: any = {
+              "line-color": area.color || group?.color || "#ef4444",
+              "line-width": area.stroke_weight ?? group?.stroke_weight ?? 3
+            };
+            if (dash !== "solid") {
+              paintProps["line-dasharray"] = dash.split(',').map((s: string) => parseFloat(s.trim())).filter((n: number) => !isNaN(n));
+            }
+            return paintProps;
+          })()
         }
       ]
     };
