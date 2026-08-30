@@ -196,10 +196,9 @@ export function MapContainer({
   const isNearStartRef = useRef(false);
 
   // ── Style state ─────────────────────────────────────────────────────────────
-  const [fillOpacity, setFillOpacity] = useState(0);
+  const [fillOpacity, setFillOpacity] = useState(0.25);
   const [lineWidth, setLineWidth] = useState(2);
-  const [showStylePanel, setShowStylePanel] = useState(false);
-  const fillOpacityRef = useRef(0);
+  const fillOpacityRef = useRef(0.25);
   const lineWidthRef = useRef(2);
 
   // ── Vertex edit state ───────────────────────────────────────────────────────
@@ -499,7 +498,13 @@ export function MapContainer({
       }
       if (!m.getLayer("areas-fill")) {
         m.addLayer({ id: "areas-fill", type: "fill", source: "areas-source",
-          paint: { "fill-color": ["get", "color"], "fill-opacity": 0.3 } });
+          paint: { 
+            "fill-color": ["get", "color"], 
+            "fill-opacity": [
+              "case", ["boolean", ["feature-state", "selected"], false], Math.min(fillOpacityRef.current + 0.25, 1), fillOpacityRef.current
+            ] 
+          } 
+        });
       }
       
       // Dynamic area-outline layers are created in the areas sync useEffect
@@ -1108,11 +1113,13 @@ export function MapContainer({
         "case", ["boolean", ["feature-state", "selected"], false], Math.min(fillOpacity + 0.25, 1), fillOpacity,
       ]);
     }
-    if (map.current.getLayer("areas-outline")) {
-      map.current.setPaintProperty("areas-outline", "line-width", [
-        "case", ["boolean", ["feature-state", "selected"], false], lineWidth + 2, lineWidth,
-      ]);
-    }
+    map.current.getStyle()?.layers?.forEach(layer => {
+      if (layer.id.startsWith("areas-outline-")) {
+        map.current?.setPaintProperty(layer.id, "line-width", [
+          "case", ["boolean", ["feature-state", "selected"], false], ["+", ["get", "stroke_weight"], 2], ["get", "stroke_weight"],
+        ]);
+      }
+    });
   }, [fillOpacity, lineWidth, mapLoaded]);
 
   // ── Sync selected feature state ───────────────────────────────────────────
@@ -1271,48 +1278,18 @@ export function MapContainer({
             </>
           )}
 
-          {/* Style Settings */}
+          {/* Toggle Fill Settings */}
           {toolMode === "select" && !editingAreaId && (
-            <div className="relative mt-0.5">
-              <button
-                title="Style Settings"
-                onClick={() => setShowStylePanel(p => !p)}
-                className={`w-9 h-9 flex items-center justify-center rounded-lg shadow-md border transition-all
-                  ${showStylePanel ? "bg-indigo-600 text-white border-indigo-700" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"}`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M19.07 4.93a10 10 0 0 1 1.85 11.07 10 10 0 0 1-8.92 5.5 10 10 0 0 1-8.92-5.5 10 10 0 0 1 1.85-11.07"/>
-                </svg>
-              </button>
-
-              {showStylePanel && (
-                <div className="absolute left-11 top-0 bg-white rounded-xl shadow-xl border border-slate-200 p-4 z-20" style={{ width: 220 }}>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Style Settings</h4>
-                  <div className="mb-4">
-                    <div className="flex justify-between text-xs text-slate-600 mb-1.5">
-                      <span>Fill Opacity</span>
-                      <span className="font-mono text-indigo-600">{Math.round(fillOpacity * 100)}%</span>
-                    </div>
-                    <input type="range" min={0} max={0.9} step={0.05} value={fillOpacity}
-                      onChange={e => setFillOpacity(parseFloat(e.target.value))}
-                      className="w-full accent-indigo-600" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs text-slate-600 mb-1.5">
-                      <span>Border Weight</span>
-                      <span className="font-mono text-indigo-600">{lineWidth}px</span>
-                    </div>
-                    <input type="range" min={1} max={8} step={0.5} value={lineWidth}
-                      onChange={e => setLineWidth(parseFloat(e.target.value))}
-                      className="w-full accent-indigo-600" />
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100 pt-2">
-                    Area colors are set per Group in the sidebar.
-                  </p>
-                </div>
-              )}
-            </div>
+            <button
+              title={fillOpacity > 0 ? "Hide Area Fill" : "Show Area Fill"}
+              onClick={() => setFillOpacity(fillOpacity > 0 ? 0 : 0.25)}
+              className={`w-9 h-9 flex items-center justify-center rounded-lg shadow-md border transition-all mt-0.5
+                ${fillOpacity > 0 ? "bg-indigo-600 text-white border-indigo-700" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={fillOpacity > 0 ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 22h20L12 2z"/>
+              </svg>
+            </button>
           )}
         </div>
       )}
